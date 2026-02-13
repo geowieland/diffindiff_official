@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+env/
+*.env
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+
+# Backup
+diffindiff_Package/
+
+# VS Code
+*.code-workspace
+.vscode/
+
+# Jupyter
+*.ipynb
+
+*.png
