@@ -1,4 +1,4 @@
-# diffindiff: A Python library for convenient difference-in-differences analyses
+# diffindiff: Python library for convenient Difference-in-Differences Analyses
 
 This Python library is designed for performing Difference-in-Differences (DiD) analyses in a convenient way. It allows users to construct datasets, define treatment and control groups, and set treatment periods. DiD model analyses may be conducted with both datasets created by built-in functions and ready-to-use external datasets. Both simultaneous and staggered adoption are supported. The library allows for various extensions, such as two-way fixed effects models, group- or individual-specific effects, post-treatment periods, and triple-difference estimations. Additionally, it includes functions for visualizing results, such as plotting DiD coefficients with confidence intervals and illustrating the temporal evolution of staggered treatments. Furthermore, several functions for rigorous treatment setting and data diagnostics are incorporated.
 
@@ -12,7 +12,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 - 📦 PyPI: [diffindiff](https://pypi.org/project/diffindiff/)
 - 💻 GitHub Repository: [diffindiff_official](https://github.com/geowieland/diffindiff_official)
-- 📄 DOI (Zenodo): [10.5281/zenodo.18639559](https://doi.org/10.5281/zenodo.18639559)
+- 📄 DOI (Zenodo): [10.5281/zenodo.18656820](https://doi.org/10.5281/zenodo.18656820)
 
 
 ## Citation
