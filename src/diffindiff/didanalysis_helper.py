@@ -4,9 +4,9 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.5
-# Last update: 2025-12-07 10:27
-# Copyright (c) 2025 Thomas Wieland
+# Version:     1.0.6
+# Last update: 2025-02-20 17:38
+# Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 import pandas as pd
@@ -918,10 +918,9 @@ def create_timestamp(function):
     now = datetime.now()
 
     timestamp_dict = {
-        "package_version": f"diffindiff {config.PACKAGE_VERSION}",
+        "package_version": f"{config.PACKAGE_NAME} {config.PACKAGE_VERSION}",
         "function": function,
         "datetime": now.strftime("%Y-%m-%d %H-%M-%S")
     }
 
     return timestamp_dict
-

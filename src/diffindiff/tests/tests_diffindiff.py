@@ -4,9 +4,9 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.0.10
-# Last update: 2025-12-05 17:23
-# Copyright (c) 2025 Thomas Wieland
+# Version:     2.0.11
+# Last update: 2026-02-20 17:44
+# Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 

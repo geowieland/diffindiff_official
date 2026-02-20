@@ -4,15 +4,16 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.4
-# Last update: 2025-12-07 10:27
-# Copyright (c) 2025 Thomas Wieland
+# Version:     2.1.5
+# Last update: 2026-02-20 17:43
+# Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 
 import pandas as pd
 import numpy as np
 import re
+from datetime import datetime
 from collections.abc import Iterable
 from statsmodels.formula.api import ols
 from sklearn.ensemble import BaggingRegressor, RandomForestRegressor, GradientBoostingRegressor
@@ -23,7 +24,6 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from huff.goodness_of_fit import modelfit, modelfit_cat, modelfit_plot
 import diffindiff.config as config
 
 
@@ -948,3 +948,28 @@ def bool_to_YN(val):
         return "YES" if val else "NO"    
     else:        
         return val
+    
+def check_date_format(
+    dates: list = None, 
+    date_format: str = "%Y-%m-%d"
+    ):
+    
+    if dates is None:
+        dates = []
+    
+    invalid_dates_included = False
+    invalid_dates = []
+    
+    for date in dates:
+        try:
+            datetime.strptime(date, date_format)
+        except (ValueError, TypeError):
+            invalid_dates.append(date)
+    
+    if len(invalid_dates) > 0:
+        invalid_dates_included = True
+    
+    return [
+        invalid_dates_included,
+        invalid_dates
+    ]

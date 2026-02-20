@@ -4,15 +4,14 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.2
-# Last update: 2025-12-07 10:27
-# Copyright (c) 2025 Thomas Wieland
+# Version:     2.2.3
+# Last update: 2026-02-20 17:42
+# Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 
 import pandas as pd
 import numpy as np
-from math import isnan
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 import diffindiff.didtools as tools
@@ -930,7 +929,7 @@ class DiffModel:
         if "TG" in plot_intervals_groups and "CG" in plot_intervals_groups:
             lines_labels_required = lines_labels_required+2            
         assert len(lines_col) == lines_col_required, f"Parameter 'lines_col' must be a list with {lines_col_required} entries"
-        assert len(lines_style) == lines_style_required, f"Parameter 'lines_style' must be a list with {lines_col_required} entries"
+        assert len(lines_style) == lines_style_required, f"Parameter 'lines_style' must be a list with {lines_style_required} entries"
         assert len(lines_labels) == lines_labels_required, f"Parameter 'lines_labels' must be a list with {lines_labels_required} entries"
             
         model_data = self.data[2]

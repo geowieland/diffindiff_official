@@ -4,9 +4,9 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.5
-# Last update: 2025-12-07 10:27
-# Copyright (c) 2025 Thomas Wieland
+# Version:     2.1.6
+# Last update: 2026-02-20 18:28
+# Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 
@@ -76,29 +76,34 @@ class DiffGroups:
         verbose: bool = config.VERBOSE       
         ):
 
-        groups_config = self.data[1]
+        groups_config = self.data[1]        
         
         if groups_config["DDD"]:
-            raise ValueError("DiffGroups object already includes a benefit group")
+            
+            print("DiffGroups object already includes a benefit group. No segmentation added.")
+            
+            groups = self
+            
+        else:
 
-        if verbose:
-            print(f"Adding benefit group with {len(group_benefit)} units to groups data", end = " ... ")
+            if verbose:
+                print(f"Adding benefit group with {len(group_benefit)} units to groups data", end = " ... ")                
+            
+            groups_data = self.data[0]
+            
+            groups_data[config.BG_COL] = 0
+            groups_data.loc[groups_data[config.UNIT_COL].astype(str).isin(group_benefit), config.BG_COL] = 1
+            
+            groups_config["DDD"] = True
 
-        groups_data = self.data[0]        
+            groups = DiffGroups(
+                groups_data, 
+                groups_config,
+                timestamp = helper.create_timestamp(function="add_segmentation")
+                )
 
-        groups_data[config.BG_COL] = 0
-        groups_data.loc[groups_data[config.UNIT_COL].astype(str).isin(group_benefit), config.BG_COL] = 1
-        
-        groups_config["DDD"] = True
-
-        groups = DiffGroups(
-            groups_data, 
-            groups_config,
-            timestamp = helper.create_timestamp(function="add_segmentation")
-            )
-
-        if verbose:
-            print("OK")
+            if verbose:
+                print("OK")
 
         return groups
 
@@ -255,9 +260,16 @@ def create_treatment(
     after_treatment_period: bool = False,
     verbose = config.VERBOSE
     ): 
+       
+    check_dates = tools.check_date_format(
+        dates = study_period+treatment_period,
+        date_format = date_format
+    )
+    if check_dates[0]:
+        raise ValueError(f"Study and/or treatment period include invalid dates: {', '.join(check_dates[1])}.")
 
     TT_col = config.TT_COL
-
+    
     if treatment_name is not None:
         
         if not isinstance(treatment_name, str):
@@ -1016,6 +1028,15 @@ def merge_data(
     keep_columns: bool = False,
     verbose: bool = config.VERBOSE
     ):
+    
+    tools.check_columns(
+        df = outcome_data,
+        columns = [
+            unit_id_col, 
+            time_col, 
+            outcome_col
+            ]
+        )
 
     if verbose:
         print("Merging groups and treatment data", end = " ... ")
