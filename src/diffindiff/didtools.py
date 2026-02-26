@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.5
-# Last update: 2026-02-20 17:43
+# Version:     2.1.6
+# Last update: 2026-02-26 18:33
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -45,6 +45,30 @@ def check_columns(
         
         if missing_columns:
             raise KeyError(f"Data do not contain column(s): {', '.join(missing_columns)}")
+
+def is_numeric(
+    df: pd.DataFrame, 
+    columns: list,
+    verbose: bool = config.VERBOSE
+    ):
+    
+    if len(columns) > 0:
+        
+        if verbose:
+            print(f"Checking if column(s) {', '.join(columns)} are numeric", end=" ... ")
+        
+        non_numeric_columns = []
+        
+        for col in columns:
+        
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                non_numeric_columns.append(col)
+        
+        if verbose:
+            print("OK")
+        
+        if non_numeric_columns:
+            raise KeyError(f"Data contain non-numeric column(s): {', '.join(non_numeric_columns)}")
 
 def panel_index(
     data: pd.DataFrame,
@@ -527,8 +551,11 @@ def is_multiple_treatment_period(
         unit_treatment = data_sub[treatment_col]
 
         groups = (unit_treatment != unit_treatment.shift()).cumsum()
-
-        periods_count = (unit_treatment == 1).groupby(groups).any().sum()
+        
+        if config.ACCEPT_CONTINUOUS_TREATMENTS:
+            periods_count = (unit_treatment > 0).groupby(groups).any().sum()
+        else:
+            periods_count = (unit_treatment == 1).groupby(groups).any().sum()
 
         unit_treatment_periods[unit] = int(periods_count)
 
@@ -636,25 +663,31 @@ def treatment_times(
         verbose=verbose
         )
     
-    is_multiple_treatment_period(
+    is_multiple_treatment_period_result = is_multiple_treatment_period(
         data = data,
         unit_col = unit_col,
         treatment_col = treatment_col,
         verbose = verbose
-        )[0]
+        )    
     
     if verbose:
         print(f"Identifying treatment times for treatment '{treatment_col}'", end = " ... ")
     
-    tt = list(unique(data.loc[data[treatment_col] == 1, time_col]))
-
+    if config.ACCEPT_CONTINUOUS_TREATMENTS:
+        tt = list(unique(data.loc[data[treatment_col] > 0, time_col]))
+    else:
+        tt = list(unique(data.loc[data[treatment_col] == 1, time_col]))
+    
     units = unique(data[unit_col])
     
     units_tt = pd.DataFrame(columns = [unit_col, "treatment_min", "treatment_max"])
     
     for unit in units:
         
-        data_unit_tt = data[(data[unit_col] == unit) & (data[treatment_col] == 1)]
+        if config.ACCEPT_CONTINUOUS_TREATMENTS:
+            data_unit_tt = data[(data[unit_col] == unit) & (data[treatment_col] > 0)]
+        else:
+            data_unit_tt = data[(data[unit_col] == unit) & (data[treatment_col] == 1)]
         
         if data_unit_tt.empty:
             continue
@@ -678,7 +711,7 @@ def treatment_times(
         
     if verbose:
         print("OK")
-        
+            
     return [
         units_tt,
         tt
@@ -796,9 +829,9 @@ def fit_metrics(
 
     assert observed_no == expected_no, "Error while calculating fit metrics: Observed and expected differ in length"
     
-    if not pd.api.types.is_numeric_dtype(observed):
+    if not pd.api.types.is_numeric_dtype(observed) or not np.issubdtype(observed.dtype, np.number):
         raise ValueError("Error while calculating fit metrics: Observed column is not numeric")
-    if not pd.api.types.is_numeric_dtype(expected):
+    if not pd.api.types.is_numeric_dtype(expected) or not np.issubdtype(expected.dtype, np.number):
         raise ValueError("Error while calculating fit metrics: Expected column is not numeric")
     
     if outcome_col is not None:
@@ -810,8 +843,8 @@ def fit_metrics(
     
     if remove_nan:
         
-        observed = observed.reset_index(drop=True)
-        expected = expected.reset_index(drop=True)
+        observed = np.array(observed)
+        expected = np.array(expected)
 
         obs_exp = pd.DataFrame(
             {
@@ -968,6 +1001,7 @@ def check_date_format(
     
     if len(invalid_dates) > 0:
         invalid_dates_included = True
+        invalid_dates = [str(d) for d in invalid_dates]
     
     return [
         invalid_dates_included,

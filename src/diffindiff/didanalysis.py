@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.3
-# Last update: 2026-02-20 17:42
+# Version:     2.2.4
+# Last update: 2026-02-26 18:04
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1356,8 +1356,8 @@ def did_analysis(
     missing_replace_by_zero: bool = False,
     fit_by = "ols_fit",
     verbose: bool = config.VERBOSE
-    ):
-    
+    ):    
+   
     tools.check_columns(
         df = data,
         columns = [
@@ -1379,6 +1379,12 @@ def did_analysis(
         raise ValueError("No treatment(s) in parameter 'treatment_col' stated.")
     
     tools.check_columns(
+        df = data,
+        columns = treatment_col,
+        verbose = verbose
+        )
+    
+    tools.is_numeric(
         df = data,
         columns = treatment_col,
         verbose = verbose
@@ -1807,7 +1813,7 @@ def did_analysis(
         }
     
     if bonferroni:
-        confint_alpha = confint_alpha/no_treatments   
+        confint_alpha = confint_alpha/no_treatments
 
     if fit_by == "ml":
         fit_result = helper.ml_fit(
@@ -1824,7 +1830,7 @@ def did_analysis(
             cluster_SE_by = cluster_SE_by,
             verbose = verbose
         )
-    
+           
     model_results = helper.extract_model_results(
         fit_result = fit_result,
         TG_col = TG_col,

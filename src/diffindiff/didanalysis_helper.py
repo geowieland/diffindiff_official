@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.6
-# Last update: 2025-02-20 17:38
+# Version:     1.0.7
+# Last update: 2025-02-26 18:02
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -203,7 +203,7 @@ def create_spillover(
                 time_col = time_col,
                 treatment_col = treatment,
                 create_TT_col = TT_col,
-                verbose = verbose
+                verbose = False
                 )[0]          
 
         sp_unit_col = f"{config.SPILLOVER_UNIT_PREFIX}{config.DELIMITER}{treatment}"
@@ -396,7 +396,11 @@ def treatment_diagnostics(
         )
     
     if verbose:
-        print(f"There are {no_treatments} treatments (simultaneous: {no_treatments-staggered_count}, staggered: {staggered_count}) with {untreated[0]} treated and {untreated[1]} untreated units.")
+        
+        if no_treatments > 1:
+            print(f"There are {no_treatments} treatments (simultaneous: {no_treatments-staggered_count}, staggered: {staggered_count}) with {untreated[0]} treated and {untreated[1]} untreated units.")
+        else:
+            print(f"There is {no_treatments} treatment (staggered: {staggered_count}) with {untreated[0]} treated and {untreated[1]} untreated units.")
 
     return [
         treatment_diagnostics_results,

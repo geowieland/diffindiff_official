@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.6
-# Last update: 2026-02-20 18:28
+# Version:     2.1.8
+# Last update: 2026-02-26 18:30
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -486,7 +486,7 @@ class DiffData:
         variables: list = None,
         unit_col: str = None,
         time_col: str = None,
-        verbose: bool = config.VERBOSE
+        verbose: bool = False
         ):
         
         if unit_col is None and time_col is None:
@@ -579,6 +579,7 @@ class DiffData:
         
         self.data[0] = did_modeldata
         self.data[5] = variables
+        self.data[7][len(self.data[7])] = helper.create_timestamp(function="add_covariates")
 
         if verbose:
             print("OK")
@@ -622,7 +623,6 @@ class DiffData:
         groups_data_old = did_groups_old.get_data()
 
         did_modeldata_old = self.get_did_modeldata_df()
-        unit_id_col, time_col = self.get_unit_time_cols()
         outcome_col_original = self.data[3]
         unit_time_col_original = self.get_unit_time_cols()
         covariates = self.get_covariates()
@@ -728,21 +728,157 @@ class DiffData:
             timestamp = helper.create_timestamp(function="add_treatment")
             )
 
-        did_data_new = DiffData(
-            did_modeldata = did_modeldata_new, 
-            diff_groups = groups_new, 
-            diff_treatment = treatment_new, 
-            outcome_col_original = outcome_col_original,
-            unit_time_col_original = unit_time_col_original,
-            covariates = covariates,
-            treatment_cols = treatment_cols_new,
-            timestamp = helper.create_timestamp(function="add_segmentation")
-            )
-
         if verbose:
             print("OK")
 
-        return did_data_new
+        self.data[0] = did_modeldata_new
+        self.data[1] = groups_new
+        self.data[2] = treatment_new
+        self.data[3] = outcome_col_original
+        self.data[4] = unit_time_col_original
+        self.data[5] = covariates
+        self.data[6] = treatment_cols_new
+        self.data[7][len(self.data[7])] = helper.create_timestamp(function="add_treatment")
+        
+        return self
+
+    def define_treatment(
+        self,
+        treatment_name,
+        after_treatment_period: bool = False,
+        after_treatment_name = None,
+        verbose: bool = config.VERBOSE
+        ):
+
+        if not treatment_name:            
+            raise ValueError("When adding a treatment from the data, you need to specify a treatment column with parameter treament_name = [your_treatment].")
+        
+        if treatment_name not in self.get_did_modeldata_df().columns:
+            raise KeyError(f"Column '{treatment_name}' not in data frame")
+
+        did_treatment_old = self.get_did_treatment()
+        treatment_config_old = did_treatment_old.get_config()
+        treatment_meta_old = did_treatment_old.get_metadata()        
+        no_treatments_old = treatment_meta_old["no_treatments"]
+
+        did_groups_old = self.get_did_groups()
+        groups_config_old = did_groups_old.get_config()
+        groups_data_old = did_groups_old.get_data()
+
+        did_modeldata_old = self.get_did_modeldata_df()
+        outcome_col_original = self.data[3]
+        unit_time_col_original = self.get_unit_time_cols()
+        covariates = self.get_covariates()
+
+        treatment_cols = self.get_treatment_cols()
+        treatment_cols_new = treatment_cols
+
+        no_treatments = no_treatments_old+1
+        key_counter = no_treatments-1        
+        
+        tt = tools.treatment_times(
+            data = did_modeldata_old,
+            unit_col=config.UNIT_COL,
+            time_col=config.TIME_COL,
+            treatment_col=treatment_name,
+            verbose=verbose
+        )
+        
+        tt_date = [datetime.strptime(t, treatment_meta_old["date_format"]) for t in tt[1]]
+        treatment_period_start = min(tt_date)
+        treatment_period_end = max(tt_date)
+        treatment_period_start = treatment_period_start.strftime("%Y-%m-%d")
+        treatment_period_end = treatment_period_end.strftime("%Y-%m-%d")        
+        
+        is_notreatment_result = tools.is_notreatment(
+            data = did_modeldata_old,
+            unit_col=config.UNIT_COL,
+            treatment_col=treatment_name,
+            verbose = verbose 
+            )
+        
+        treatment_group = is_notreatment_result[1]
+        control_group = is_notreatment_result[2]
+        
+        if verbose:
+            print(f"Constructing treatment from column '{treatment_name}'", end = " ... ")
+
+        new_groups = create_groups(
+            treatment_group = treatment_group, 
+            control_group = control_group,
+            treatment_name = treatment_name,
+            verbose=False
+            )
+        new_groups_data_df = new_groups.get_data()[0]        
+        new_groups_config = new_groups.get_config()
+        TG_col = new_groups_config[0]["TG_col"]
+
+        new_treatment = create_treatment(
+            study_period = [treatment_meta_old["study_period_start"], treatment_meta_old["study_period_end"]],
+            treatment_period = [treatment_period_start, treatment_period_end],
+            freq = treatment_meta_old["frequency"],
+            date_format = treatment_meta_old["date_format"],
+            treatment_name = treatment_name,
+            pre_post = treatment_meta_old["pre_post"],
+            after_treatment_period = after_treatment_period,
+            verbose=False
+            )
+        
+        new_treatment_data_df = new_treatment.get_data()
+        
+        new_treatment_config = new_treatment.get_config()        
+        TT_col = new_treatment_config[0]["TT_col"]
+        ATT_col = new_treatment_config[0]["ATT_col"]
+       
+        treatment_cols_new[key_counter] = {
+            "TT_col": TT_col, 
+            "ATT_col": ATT_col, 
+            "treatment_name": treatment_name, 
+            "after_treatment_name": after_treatment_name                
+            }
+        
+        groups_config_new = groups_config_old
+        groups_config_new[key_counter] = new_groups_config[0] 
+        groups_data_new = groups_data_old
+        groups_data_old.append(new_groups_data_df) 
+        groups_new = DiffGroups(
+            groups_data_new, 
+            groups_config_new,
+            timestamp = helper.create_timestamp(function="define_treatment")
+            )
+
+        treatment_meta_new = treatment_meta_old
+        treatment_meta_new["no_treatments"] = no_treatments
+        treatment_config_new = treatment_config_old
+        treatment_config_new[key_counter] = new_treatment_config[0]
+        
+        treatment_new = DiffTreatment(
+            new_treatment_data_df, 
+            treatment_config_new,
+            treatment_meta_new,
+            timestamp = helper.create_timestamp(function="define_treatment")
+            )       
+
+        if verbose:
+            print("OK")
+            
+        if treatment_name in covariates:
+            
+            if verbose:
+                print(f"NOTE: Column '{treatment_name}' was defined as covariate before and is now removed from covariates list.")
+            
+            covariates.remove(treatment_name)
+
+        self.data[0] = did_modeldata_old
+        self.data[1] = groups_new
+        self.data[2] = treatment_new
+        self.data[3] = outcome_col_original
+        self.data[4] = unit_time_col_original
+        self.data[5] = covariates
+        self.data[6] = treatment_cols_new
+        self.data[7][len(self.data[7])] = helper.create_timestamp(function="define_treatment")        
+        
+        return self
 
     def add_segmentation(
         self,
@@ -979,8 +1115,8 @@ class DiffData:
                 if value["after_treatment_name"] is not None:
                     after_treatment_col[key] = value["after_treatment_name"]
                 if value["ATT_col"] is not None:
-                    ATT_col[key] = value["ATT_col"]
-                    
+                    ATT_col[key] = value["ATT_col"]            
+            
             did_results = didanalysis.did_analysis(
                 data = did_modeldata,
                 TG_col = TG_col,
@@ -1038,9 +1174,6 @@ def merge_data(
             ]
         )
 
-    if verbose:
-        print("Merging groups and treatment data", end = " ... ")
-
     groups_data_df = diff_groups.get_data()
     groups_data_df = groups_data_df[0]
     
@@ -1096,6 +1229,9 @@ def merge_data(
         verbose=verbose
         )
 
+    if verbose:
+        print("Merging groups and treatment data", end = " ... ")
+
     if keep_columns:
         outcome_data_short = outcome_data
     else:
@@ -1129,7 +1265,8 @@ def merge_data(
             }
         }
 
-    timestamp = helper.create_timestamp(function="merge_data")
+    timestamp = {}
+    timestamp[0] = helper.create_timestamp(function="merge_data")
 
     did_data_all = DiffData(
         did_modeldata, 
@@ -1195,8 +1332,6 @@ def create_data(
         missing_replace_by_zero = missing_replace_by_zero,
         verbose = verbose
         )
-
-    did_data_all.timestamp = helper.create_timestamp(function="create_data")
 
     return did_data_all
 

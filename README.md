@@ -19,7 +19,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.2.6) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.2.7) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -159,11 +159,9 @@ See the /tests directory for usage examples of most of the included functions.
   - Wooldridge JM (2012) *Introductory Econometrics. A Modern Approach*.
 
 
-## What's new (v2.2.6)
+## What's new (v2.2.7)
+- Functions
+  - diddata.DiffData.define_treatment() for constructing a new treatment from a column in the dataframe 
 - Bugfixes:
-  - Check for correct dates in diddata.create_treatment()
-  - Check for valid columns in diddata.merge_data()
-  - Removed unnecessary old dependencies and imports
-- Other:
-  - Changed diddata.DiffGroups.add_segmentation() to return a message rather than raising an exception when the DiffGroups object already includes a benefit group
-
+  - didtools.treatment_times() and didtools.is_multiple_treatment_period() now also identify continuous treatments correctly
+  - Fixed problematic type conversion in didtools.fit_metrics()
