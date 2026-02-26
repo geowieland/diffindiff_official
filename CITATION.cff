@@ -1,9 +1,11 @@
-cff-version: 1.1.0
+cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-- family-names: Thomas
-  given-names: Wieland
-orcid: https://orcid.org/0000-0001-5168-9846
-title:diffindiff: Python library for convenient Difference-in-Differences analyses  
+- family-names: "Wieland"
+  given-names: "Thomas"
+  orcid: "https://orcid.org/0000-0001-5168-9846"
+title: "diffindiff: Python library for convenient Difference-in-Differences analyses"
 version: 2.2.7
+doi: 10.5281/zenodo.18656820
 date-released: 2026-02-26
+url: "https://github.com/geowieland/diffindiff_official"
