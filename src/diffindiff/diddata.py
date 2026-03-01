@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.8
-# Last update: 2026-02-26 18:30
+# Version:     2.2.0
+# Last update: 2026-03-01 20:04
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -19,12 +19,40 @@ import diffindiff.config as config
 import diffindiff.didanalysis_helper as helper
 
 class DiffGroups:
+
     def __init__(
         self, 
         groups_data: list, 
         groups_config_dict: dict,
         timestamp: dict
         ):
+
+        """
+        Container class for treatment/control group data and configuration.
+
+        Parameters
+        ----------
+        groups_data : list
+            List containing group data frames.
+        groups_config_dict : dict
+            Configuration dictionary for the groups.
+        timestamp : dict
+            Timestamp metadata.
+
+        Returns
+        -------
+        None
+            Constructor does not return a value; instance is initialized in-place.
+
+        Examples
+        --------
+        >>> curfew_groups=create_groups(
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+        ...     )
+        >>> curfew_groups.summary()
+        >>> curfew_groups.get_data()
+        """
 
         self.data = [
             groups_data, 
@@ -33,15 +61,86 @@ class DiffGroups:
             ]
 
     def get_data(self):
+
+        """
+        Return the stored groups data.
+
+        Returns
+        -------
+        list
+            The raw groups data stored in the object.
+        
+        Examples
+        --------
+        >>> curfew_groups=create_groups(
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+        ...     )
+        >>> curfew_groups.get_data()
+        """
+
         return self.data[0]
 
     def get_config(self):
+
+        """
+        Return the groups configuration dictionary.
+
+        Returns
+        -------
+        dict
+            Groups configuration.
+        
+        Examples
+        --------
+        >>> curfew_groups=create_groups(
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+        ...     )
+        >>> curfew_groups.get_config()
+        """
+
         return self.data[1]
     
     def get_timestamp(self):
+
+        """
+        Return timestamp metadata for the object.
+
+        Returns
+        -------
+        dict
+            Timestamp information.
+        
+        Examples
+        --------
+        >>> curfew_groups=create_groups(
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+        ...     )
+        >>> curfew_groups.get_timestamp()
+        """
+
         return self.data[2]
 
     def summary(self):
+
+        """
+        Print a human-readable summary of the groups configuration.
+
+        Returns
+        -------
+        DiffGroups
+            Returns self to allow method chaining.
+
+        Examples
+        --------
+        >>> curfew_groups=create_groups(
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+        ...     )
+        >>> curfew_groups.summary()
+        """
 
         groups_config = self.data[1]
 
@@ -70,11 +169,37 @@ class DiffGroups:
         
         print("=" * total_width)
 
+        return self
+
     def add_segmentation(
         self,
         group_benefit: list,
         verbose: bool = config.VERBOSE       
         ):
+        
+        """
+        Add a benefit group (segmentation) to existing groups.
+
+        Parameters
+        ----------
+        group_benefit : list
+            List of units that receive the benefit.
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffGroups
+            New DiffGroups instance with segmentation added.
+        
+        Examples
+        --------
+        >>> my_groups=create_groups(
+        ...     treatment_group=["XY", "YZ", "ZX"],
+        ...     control_group=["AB", "BC", "CD"]
+        ...     )
+        >>> my_groups.add_segmentation(["XY", "AB"])
+        """
 
         groups_config = self.data[1]        
         
@@ -113,6 +238,39 @@ def create_groups(
     treatment_name: str = None,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Create a DiffGroups object from treatment and control unit lists.
+
+    Parameters
+    ----------
+    treatment_group : iterable
+        Units belonging to the treatment group.
+    control_group : iterable
+        Units belonging to the control group.
+    treatment_name : str, optional
+        Optional name of the treatment (used to name columns).
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    DiffGroups
+        Object encapsulating group data and configuration.
+
+    Raises
+    ------
+    TypeError
+        If ``treatment_name`` is provided but not a string.
+
+    Examples
+    --------
+    >>> curfew_groups=create_groups(
+    ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+    ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+    ...     )
+    >>> curfew_groups.summary()
+    """
 
     TG_col = config.TG_COL
     
@@ -199,6 +357,27 @@ class DiffTreatment:
         timestamp: dict
         ):
 
+        """
+        Container class for treatment timing/configuration data.
+
+        Parameters
+        ----------
+        treatment_data_df : pandas.DataFrame
+            Data frame describing treatment timing (TT/ATT).
+        treatment_config_dict : dict
+            Configuration dictionary for the treatment.
+        treatment_meta : dict
+            Metadata about study/treatment period.
+        timestamp : dict
+            Timestamp metadata.
+
+        Returns
+        -------
+        None
+            Constructor does not return a value; instance is initialized in-place.
+
+        """
+
         self.data = [
             treatment_data_df, 
             treatment_config_dict, 
@@ -207,18 +386,117 @@ class DiffTreatment:
             ]
 
     def get_data(self):
+
+        """
+        Return the treatment data DataFrame.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Treatment timing data.
+        
+        Examples
+        --------
+        >>> curfew_treatment_prepost=create_treatment(
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq = "D",
+        ...     pre_post = True
+        ...     )
+        >>> curfew_treatment_prepost.get_data()
+        """
+
         return self.data[0]
 
     def get_config(self):
+
+        """
+        Return the treatment configuration dict.
+
+        Returns
+        -------
+        dict
+            Treatment configuration.
+        
+        Examples
+        --------
+        >>> curfew_treatment_prepost=create_treatment(
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq = "D",
+        ...     pre_post = True
+        ...     )
+        >>> curfew_treatment_prepost.get_config()
+        """
+
         return self.data[1]
     
     def get_metadata(self):
+
+        """
+        Return metadata for the treatment (study period, freq, etc.).
+
+        Returns
+        -------
+        dict
+            Treatment metadata.
+        
+        Examples
+        --------
+        >>> curfew_treatment_prepost=create_treatment(
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq = "D",
+        ...     pre_post = True
+        ...     )
+        >>> curfew_treatment_prepost.get_metadata()
+        """
+
         return self.data[2]
     
     def get_timestamp(self):
+
+        """
+        Return the timestamp information for the treatment object.
+
+        Returns
+        -------
+        dict
+            Timestamp data.
+
+        Examples
+        --------
+        >>> curfew_treatment_prepost=create_treatment(
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq = "D",
+        ...     pre_post = True
+        ...     )
+        >>> curfew_treatment_prepost.get_timestamp()
+        """
+
         return self.data[3]
 
     def summary(self):
+
+        """
+        Print a human-readable summary of the treatment configuration.
+
+        Returns
+        -------
+        DiffTreatment
+            Returns self to allow method chaining.
+
+        Examples
+        --------
+        >>> curfew_treatment_prepost=create_treatment(
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq = "D",
+        ...     pre_post = True
+        ...     )
+        >>> curfew_treatment_prepost.summary()
+        """
 
         treatment_config = self.data[1]
         treatment_meta = self.data[2]
@@ -250,17 +528,63 @@ class DiffTreatment:
 
         print("=" * total_width)
 
+        return self
+
 def create_treatment(
-    study_period,
-    treatment_period,
-    freq = "D",
-    date_format = "%Y-%m-%d",
+    study_period: list,
+    treatment_period: list,
+    freq: str = "D",
+    date_format: str = "%Y-%m-%d",
     treatment_name: str = None,
     pre_post: bool = False,
     after_treatment_period: bool = False,
     verbose = config.VERBOSE
     ): 
        
+    """
+
+    Create a DiffTreatment object describing treatment timepoints.
+
+    Parameters
+    ----------
+    study_period : list
+        [start_date, end_date] of the study period (strings).
+    treatment_period : list
+        [start_date, end_date] of the treatment period (strings).
+    freq : str, optional
+        Frequency string for date_range (default 'D').
+    date_format : str, optional
+        Date formatting string for input/output.
+    treatment_name : str, optional
+        Optional name of the treatment used to name columns.
+    pre_post : bool, optional
+        If True, create a pre-post design (two timepoints).
+    after_treatment_period : bool, optional
+        If True, create ATT column for after-treatment period.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    DiffTreatment
+        Treatment object with timing and config.
+
+    Raises
+    ------
+    ValueError
+        If input dates are invalid.
+
+    Examples
+    --------
+    >>> curfew_treatment_prepost=create_treatment(
+    ...     study_period=["2020-03-01", "2020-05-15"],
+    ...     treatment_period=["2020-03-21", "2020-05-05"],
+    ...     freq = "D",
+    ...     pre_post = True
+    ...     )
+    >>> curfew_treatment_prepost.summary()
+    """
+
     check_dates = tools.check_date_format(
         dates = study_period+treatment_period,
         date_format = date_format
@@ -448,6 +772,35 @@ class DiffData:
         timestamp
         ):
 
+        """
+
+        Container class for assembled DiD model data, groups and treatment objects.
+
+        Parameters
+        ----------
+        did_modeldata : pandas.DataFrame
+            Assembled model data for DiD analysis.
+        diff_groups : DiffGroups
+            Groups object describing treatment/control units.
+        diff_treatment : DiffTreatment
+            Treatment object describing timing/config.
+        outcome_col_original : str
+            Name of the original outcome column.
+        unit_time_col_original : tuple
+            Original (unit, time) column names.
+        covariates : list
+            Covariate column names.
+        treatment_cols : dict
+            Mapping of treatment columns metadata.
+        timestamp : dict
+            Timestamp metadata.
+        Returns
+        -------
+        None
+            Constructor does not return a value; instance is initialized in-place.
+
+        """
+
         self.data = [
             did_modeldata, 
             diff_groups, 
@@ -460,24 +813,213 @@ class DiffData:
             ]
 
     def get_did_modeldata_df (self):
+
+        """
+
+        Return the DiD model data as a DataFrame.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The model data used for analysis.
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_did_modeldata_df()
+        """
+
         return pd.DataFrame(self.data[0])
 
     def get_did_groups(self):
+
+        """
+
+        Return the stored DiffGroups object.
+
+        Returns
+        -------
+        DiffGroups
+            Groups object.
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_did_groups()
+        """
+
         return self.data[1]
 
     def get_did_treatment(self):
+
+        """
+
+        Return the stored DiffTreatment object.
+
+        Returns
+        -------
+        DiffTreatment
+            Treatment object.
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_did_treatment()
+        """
+
         return self.data[2]
 
     def get_unit_time_cols(self):
+
+        """
+
+        Return the original unit/time column names.
+
+        Returns
+        -------
+        tuple
+            (unit_col, time_col)
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_unit_time_cols()
+        """
+
         return self.data[4]
 
     def get_covariates(self):
+
+        """
+
+        Return the list of covariate column names.
+
+        Returns
+        -------
+        list
+            Covariate column names.
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_covariates()
+        """
+
         return self.data[5]
     
     def get_treatment_cols(self):
+
+        """
+
+        Return the stored treatment columns metadata.
+
+        Returns
+        -------
+        dict
+            Treatment columns mapping.
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_treatment_cols()
+        """
+
         return self.data[6]
     
     def get_timestamp(self):
+
+        """
+
+        Return timestamp metadata for the DiffData object.
+
+        Returns
+        -------
+        dict
+            Timestamp information.
+        
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.get_timestamp()
+        """
+
         return self.data[7]
 
     def add_covariates(
@@ -488,9 +1030,60 @@ class DiffData:
         time_col: str = None,
         verbose: bool = False
         ):
+
+        """
+        Merge additional covariates into the DiD model data.
+
+        Parameters
+        ----------
+        additional_df : pandas.DataFrame
+            DataFrame with covariates to add.
+        variables : list, optional
+            Subset of columns from ``additional_df`` to merge.
+        unit_col : str, optional
+            Name of the unit id column in ``additional_df``.
+        time_col : str, optional
+            Name of the time column in ``additional_df``.
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffData
+            Updated DiffData with covariates merged in.
+
+        Raises
+        ------
+        ValueError
+            If neither ``unit_col`` nor ``time_col`` is provided.
         
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost_withcov = curfew_data_prepost.add_covariates(
+        ...     additional_df=counties_DE, 
+        ...     unit_col="county",
+        ...     time_col=None, 
+        ...     variables=["comm_index", "TourPer1000"]
+        ...     )
+        """
+
         if unit_col is None and time_col is None:
             raise ValueError("Parameter 'unit_col' and/or 'time_col' must be stated")
+        
+        if variables is None:
+            variables = []
         
         if verbose:
             if len(variables) > 0:
@@ -591,21 +1184,70 @@ class DiffData:
 
     def add_treatment(
         self,
-        treatment_name,
-        treatment_period,
+        treatment_name: str,
+        treatment_period: list,
         treatment_group,
         control_group,
         after_treatment_period: bool = False,
         after_treatment_name = None,
         verbose: bool = config.VERBOSE
         ):
-
-        if not treatment_name:
-            
-            raise ValueError("When adding a treatment, you need to specify a treatment name with parameter treament_name = [your_treatment].")
         
-        else:
-            
+        """
+        Add a new treatment to the DiffData object by merging groups and treatment timing.
+
+        Parameters
+        ----------
+        treatment_name : str
+            Name of the new treatment column to add.
+        treatment_period : list
+            Treatment period [start, end].
+        treatment_group : iterable
+            Units in the treatment group.
+        control_group : iterable
+            Units in the control group.
+        after_treatment_period : bool, optional
+            If True, include after-treatment period.
+        after_treatment_name : str, optional
+            Name for the after-treatment variable.
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffData
+            The updated DiffData object.
+
+        Raises
+        ------
+        ValueError
+            If ``treatment_name`` is not provided.
+        
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     treatment_name="Curfew",
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D"
+        ...     )
+        >>> curfew_data_extended = curfew_data.add_treatment(
+        ...     treatment_name='Contact ban',
+        ...     treatment_period=['2020-03-23','2020-05-04'],
+        ...     treatment_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+        ...     )
+        """
+
+        if not treatment_name:            
+            raise ValueError("When adding a treatment, you need to specify a treatment name with parameter treament_name = [your_treatment].")
+        else:            
             treatment_name = tools.clean_treatment_name(treatment_name)
 
         if verbose:
@@ -744,11 +1386,60 @@ class DiffData:
 
     def define_treatment(
         self,
-        treatment_name,
+        treatment_name: str,
         after_treatment_period: bool = False,
-        after_treatment_name = None,
+        after_treatment_name: str = None,
         verbose: bool = config.VERBOSE
         ):
+
+        """
+        Define an existing column in the model data as a treatment.
+
+        Parameters
+        ----------
+        treatment_name : str
+            Column name in the model data that indicates treatment.
+        after_treatment_period : bool, optional
+            If True, include after-treatment period.
+        after_treatment_name : str, optional
+            Name for the after-treatment variable.
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffData
+            Updated DiffData with the new treatment definition.
+
+        Raises
+        ------
+        ValueError
+            If ``treatment_name`` is not provided.
+        KeyError
+            If ``treatment_name`` does not exist in model data.
+
+        Examples
+        --------
+        >>> Sensoria_Daten=did.create_data(
+        ...     outcome_data=Tourismusdaten_Tabelle,
+        ...     unit_id_col="Gemeinde",
+        ...     time_col="Jahr_Monat",
+        ...     outcome_col="Gaesteuebernachtungen_insgesamt",
+        ...     treatment_group=Tourismusdaten_Tabelle.loc[Tourismusdaten_Tabelle["Gemeinde"] == "255023 Holzminden,Stadt"]["Gemeinde"],
+        ...     control_group=Tourismusdaten_Tabelle.loc[Tourismusdaten_Tabelle["Gemeinde"] != "255023 Holzminden,Stadt"]["Gemeinde"],
+        ...     study_period=["2023-01-01", "2025-10-01"],
+        ...     treatment_period=["2024-09-01", "2025-10-01"],
+        ...     freq="MS",    
+        ...     treatment_name="Sensoria_geoeffnet",
+        ...     )
+        >>> Sensoria_Daten.add_covariates(
+        ...     additional_df=Tourismusdaten_Tabelle,
+        ...     variables=["Schlafgelegenheitentage_angeboten", "Event_Tage"],
+        ...     unit_col = "Gemeinde",
+        ...     time_col="Jahr_Monat",
+        ...     )
+        >>> Sensoria_Daten.define_treatment("Event_Tage")
+        """
 
         if not treatment_name:            
             raise ValueError("When adding a treatment from the data, you need to specify a treatment column with parameter treament_name = [your_treatment].")
@@ -885,6 +1576,24 @@ class DiffData:
         group_benefit: list
         ):
 
+        """
+        Add a benefit group (segmentation) to the DiffData and groups.
+
+        Parameters
+        ----------
+        group_benefit : list
+            List of units that receive the benefit (added as a BG column).
+
+        Returns
+        -------
+        DiffData
+            Updated DiffData with segmentation added.
+
+        Examples
+        --------
+        >>> my_diffdata.add_segmentation(['county_1','county_2'])
+        """
+
         diff_groups = self.data[1]
         did_modeldata = self.data[0]
 
@@ -900,13 +1609,48 @@ class DiffData:
     
     def add_own_counterfactual(
         self,
-        additional_df,
-        counterfactual_outcome_col,
-        time_col,
-        counterfactual_UID = "counterfac",
+        additional_df: pd.DataFrame,
+        counterfactual_outcome_col: str,
+        time_col: str,
+        counterfactual_UID: str = "counterfac",
         verbose: bool = config.VERBOSE
         ):
-        
+
+        """
+        Attach an external counterfactual outcome series for treated units.
+
+        Parameters
+        ----------
+        additional_df : pandas.DataFrame
+            DataFrame containing the counterfactual outcome indexed by ``time_col``.
+        counterfactual_outcome_col : str
+            Column name in ``additional_df`` with the counterfactual outcome.
+        time_col : str
+            Time column name in ``additional_df`` that aligns with study timeline.
+        counterfactual_UID : str, optional
+            Unit id to use for the synthetic counterfactual (default 'counterfac').
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffData
+            Updated DiffData with counterfactual added and groups adjusted.
+
+        Raises
+        ------
+        ValueError
+            If required parameters are missing.
+
+        Examples
+        --------
+        >>> my_diffdata.add_own_counterfactual(
+        ...     additional_df=cf_df, 
+        ...     counterfactual_outcome_col='y_cf', 
+        ...     time_col='date'
+        ...     )
+        """
+
         if time_col is None or counterfactual_outcome_col is None:
             raise ValueError("Parameters 'time_col' and 'counterfactual_outcome_col' must be stated")
         
@@ -987,6 +1731,26 @@ class DiffData:
 
     def summary(self):
 
+        """
+        Print a concise summary of the assembled DiD data, groups and treatments.
+
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_data_prepost.summary()
+        """
+
         did_modeldata = self.data[0]
        
         groups_config = self.data[1].get_config()
@@ -1044,14 +1808,82 @@ class DiffData:
         ITT: bool = False,
         GTT: bool = False,
         group_by: str = None,
-        spillover_treatment: list = [],
-        spillover_units: list = [],
-        confint_alpha = 0.05,
+        spillover_treatment: list = None,
+        spillover_units: list = None,
+        confint_alpha: float = 0.05,
         bonferroni: bool = False,
         drop_missing: bool = True,
         missing_replace_by_zero: bool = False,
         verbose: bool = config.VERBOSE
         ):
+
+        """
+        Run DiD or DDD analysis on the assembled data and return an instance 
+        of class `DiffModel`.
+
+        Parameters
+        ----------
+        log_outcome : bool, optional
+            If True, log-transform the outcome variable before estimation.
+        FE_unit : bool, optional
+            Include unit fixed effects.
+        FE_time : bool, optional
+            Include time fixed effects.
+        cluster_SE_by : str, optional
+            Column name for clustering standard errors.
+        intercept : bool, optional
+            Include intercept in the model.
+        ITE : bool, optional
+            Estimate individual treatment effects. Default is False.
+        GTE : bool, optional
+            Estimate group treatment effects. Default is False.
+        ITT : bool, optional
+            Include individual time trends. Default is False.
+        GTT : bool, optional
+            Include group-specific time trends. Default is False.
+        group_by : str, optional
+            Column name to use for group-specific effects.
+        spillover_treatment : list, optional
+            Treatments for which to create spillover variables.
+        spillover_units : list, optional
+            Units to flag as exposed to spillover.
+        confint_alpha : float, optional
+            Significance level for confidence intervals.
+        bonferroni : bool, optional
+            If True, apply Bonferroni correction to multiple tests.
+        drop_missing : bool, optional
+            If True, drop missing observations before estimation.
+        missing_replace_by_zero : bool, optional
+            If True, replace missing values with zero.
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffModel
+            Fitted model object returned by ``didanalysis.did_analysis`` or ``ddd_analysis``.
+
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
+        ...     )
+        >>> curfew_model_prepost=curfew_data_prepost.analysis()
+        """
+
+        if spillover_treatment is None:
+            spillover_treatment = []
+        if spillover_units is None:
+            spillover_units = []
 
         did_modeldata = self.get_did_modeldata_df()
         outcome_col_original = self.data[3]
@@ -1153,18 +1985,72 @@ class DiffData:
             return did_results
 
 def merge_data(
-    outcome_data,
-    unit_id_col,
-    time_col,
-    outcome_col,
-    diff_groups,
-    diff_treatment,
+    outcome_data: pd.DataFrame,
+    unit_id_col: str,
+    time_col: str,
+    outcome_col: str,
+    diff_groups: DiffGroups,
+    diff_treatment: DiffTreatment,
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     keep_columns: bool = False,
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Merge outcome data with groups and treatment timing to build a DiD dataset.
+
+    Parameters
+    ----------
+    outcome_data : pandas.DataFrame
+        Raw outcome data containing unit and time identifiers.
+    unit_id_col : str
+        Column name identifying observational units in ``outcome_data``.
+    time_col : str
+        Column name identifying time periods in ``outcome_data``.
+    outcome_col : str
+        Column name with the outcome variable.
+    diff_groups : DiffGroups
+        Groups object created by ``create_groups``.
+    diff_treatment : DiffTreatment
+        Treatment object created by ``create_treatment``.
+    drop_missing : bool, optional
+        If True, drop rows with missing values after merging.
+    missing_replace_by_zero : bool, optional
+        If True, replace missing values with zero instead of dropping.
+    keep_columns : bool, optional
+        If True, keep all columns from ``outcome_data`` when merging.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    DiffData
+        Assembled DiD data container ready for analysis.
+
+    Examples
+    --------
+    >>> curfew_groups=create_groups(
+    ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+    ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"]
+    ...     )
+    >>> curfew_treatment_prepost=create_treatment(
+    ...     study_period=["2020-03-01", "2020-05-15"],
+    ...     treatment_period=["2020-03-21", "2020-05-05"],
+    ...     freq = "D",
+    ...     pre_post = True
+    ...     )
+    >>> curfew_data_prepost_merge=merge_data(
+    ...     outcome_data=curfew_DE,
+    ...     unit_id_col="county",
+    ...     time_col="infection_date",
+    ...     outcome_col="infections_cum_per100000",
+    ...     diff_groups=curfew_groups,
+    ...     diff_treatment=curfew_treatment_prepost
+    ...     )
+    >>> curfew_data_prepost_merge.summary()
+    """
+
     tools.check_columns(
         df = outcome_data,
         columns = [
@@ -1285,23 +2171,83 @@ def merge_data(
     return did_data_all
 
 def create_data(
-    outcome_data,
-    unit_id_col,
-    time_col,
-    outcome_col,
+    outcome_data: pd.DataFrame,
+    unit_id_col: str,
+    time_col: str,
+    outcome_col: str,
     treatment_group,
     control_group,
-    study_period,
-    treatment_period,
+    study_period: list,
+    treatment_period: list,
     treatment_name: str = None,
-    freq = "D",
-    date_format = "%Y-%m-%d",
+    freq: str = "D",
+    date_format: str = "%Y-%m-%d",
     pre_post: bool = False,
     after_treatment_period: bool = False,
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Create groups, treatment timing, and merge into a DiD dataset.
+
+    Parameters
+    ----------
+    outcome_data : pandas.DataFrame
+        Raw outcome data containing unit and time identifiers.
+    unit_id_col : str
+        Column name for observational units.
+    time_col : str
+        Column name for time periods.
+    outcome_col : str
+        Column name with the outcome variable.
+    treatment_group : iterable
+        Units belonging to the treatment group.
+    control_group : iterable
+        Units belonging to the control group.
+    study_period : list
+        [start_date, end_date] of the study period.
+    treatment_period : list
+        [start_date, end_date] of the treatment period.
+    treatment_name : str, optional
+        Optional name for the treatment.
+    freq : str, optional
+        Frequency string for date_range (default 'D').
+    date_format : str, optional
+        Date format used for input parsing.
+    pre_post : bool, optional
+        If True, create a pre-post design.
+    after_treatment_period : bool, optional
+        If True, include an after-treatment ATT indicator.
+    drop_missing : bool, optional
+        If True, drop missing observations before merging/analysis. Default is True.
+    missing_replace_by_zero : bool, optional
+        If True, replace missing values by zero when requested. Default is False.
+    verbose : bool, optional
+        If True, print progress messages. Default follows package config.
+
+    Returns
+    -------
+    DiffData
+        Assembled DiD dataset ready for analysis.
+
+    Examples
+    --------
+    >>> curfew_data_prepost=create_data(
+    ...     outcome_data=curfew_DE,
+    ...     unit_id_col="county",
+    ...     time_col="infection_date",
+    ...     outcome_col="infections_cum_per100000",
+    ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+    ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+    ...     study_period=["2020-03-01", "2020-05-15"],
+    ...     treatment_period=["2020-03-21", "2020-05-05"],
+    ...     freq="D",
+    ...     pre_post=True
+    ...     )
+    >>> curfew_data_prepost.summary()
+    """
 
     groups = create_groups(
         treatment_group, 
@@ -1336,7 +2282,7 @@ def create_data(
     return did_data_all
 
 def create_counterfactual(
-    data,
+    data: pd.DataFrame,
     y: str,
     X: list,
     unit_col: str,
@@ -1345,10 +2291,10 @@ def create_counterfactual(
     cf_for_unit: str,
     use_data: str = "both",
     model_type: str = "ols",
-    test_size = 0.2,
-    train_size = None,
-    model_n_estimators = 1000,
-    model_max_features = 0.9,
+    test_size: float = 0.2,
+    train_size: float = None,
+    model_n_estimators: int = 1000,
+    model_max_features: float = 0.9,
     model_min_samples_split = 2,
     rf_max_depth = None,
     gb_iterations = 100,
@@ -1360,6 +2306,50 @@ def create_counterfactual(
     lgbm_learning_rate = 0.1,
     random_state = 71
     ):
+    
+    """
+    Train a predictive model on control/treatment pre-period data to generate counterfactuals.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        DataFrame containing outcome ``y``, predictors ``X``, unit/time and treatment columns.
+    y : str
+        Outcome column name.
+    X : list
+        Predictor column names used to train the counterfactual model.
+    unit_col : str
+        Unit identifier column name.
+    treatment_col : str
+        Treatment indicator column name.
+    time_col : str
+        Time column name.
+    cf_for_unit : str
+        Unit id for which a counterfactual should be generated (excluded from training).
+    use_data : {'both','treatment','control'}, optional
+        Subset used for training the predictive model (default 'both').
+    model_type : str, optional
+        Model type passed to ``tools.model_wrapper`` (e.g. 'ols','rf','xgb').
+    Other parameters
+        Passed to the model wrapper (hyperparameters, test/train split, random_state).
+
+    Returns
+    -------
+    list
+        [counterfactual_pred (list from model_wrapper), data_cf (training DataFrame), data_unit (observations for cf unit)].
+
+    Examples
+    --------
+    >>> result = create_counterfactual(
+    ...     data=curfew_DE, 
+    ...     y='infections_cum_per100000', 
+    ...     X=['comm_index','TourPer1000'],
+    ...     unit_col='county', 
+    ...     treatment_col='Curfew', 
+    ...     time_col='infection_date', 
+    ...     cf_for_unit='counterfac'
+    ...     )
+    """
             
     data = data[[y] + X + [unit_col, treatment_col, time_col]].copy()
 

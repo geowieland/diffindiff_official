@@ -1,6 +1,6 @@
 # diffindiff: Python library for convenient Difference-in-Differences analyses
 
-This Python library is designed for performing Difference-in-Differences (DiD) analyses in a convenient way. It allows users to construct datasets, define treatment and control groups, and set treatment periods. DiD model analyses may be conducted with both datasets created by built-in functions and ready-to-use external datasets. Both simultaneous and staggered adoption are supported. The library allows for various extensions, such as two-way fixed effects models, group- or individual-specific effects, post-treatment periods, and triple-difference estimations. Additionally, it includes functions for visualizing results, such as plotting DiD coefficients with confidence intervals and illustrating the temporal evolution of staggered treatments. Furthermore, several functions for rigorous treatment setting and data diagnostics are incorporated.
+This Python library is designed for performing Difference-in-Differences (DiD) analyses in a convenient way. The package is intended to be used in econometric analyses of natural experiments by researchers in economics, marketing, economic geography, and health sciences. It is designed to cover the entire workflow of a DiD analysis, while not requiring extensive programming skills. The package allows users to construct datasets, define treatment and control groups, and set treatment periods. DiD model analyses may be conducted with both datasets created by built-in functions and ready-to-use external datasets. Both simultaneous and staggered adoption are supported. The library allows for various extensions, such as two-way fixed effects models, group- or individual-specific effects, post-treatment periods, and triple-difference estimations. Additionally, it includes functions for visualizing results, such as plotting DiD coefficients with confidence intervals and illustrating the temporal evolution of staggered treatments. Furthermore, several functions for rigorous treatment setting and data diagnostics are incorporated.
 
 
 ## Author
@@ -19,7 +19,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.2.7) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -44,30 +44,30 @@ pip install git+https://github.com/geowieland/diffindiff_official.git
   - Create ready-to-fit DiD data objects
   - Create predictive counterfactuals
 - **DiD analysis**: 
-  - Perfom standard DiD analysis  
-  - Model extensions:
-    - Staggered adoption
-    - Multiple treatments
-    - Two-way fixed effects models
+  - Perfom standard DiD analysis with pre-post data
+  - Perfom DiD analysis with two-way fixed effects models
+  - Simultaneous and/or staggered adoption are supported
+  - Single or multiple treatments are supported
+  - Model extensions for DiD analysis:
     - Group- or individual-specific treatment effects
     - Group- or individual-specific time trends
     - Including covariates
     - Including after-treatment period
-    - Triple Difference (DDD)
-    - Own counterfactuals
-    - Bonferroni correction for treatment effects
-    - Placebo test
+  - Perform Triple Difference (DDD) analysis
+- **Diagnosis tools and extensions of analyses**:
+  - Add own counterfactuals or create counterfactuals based on machine learning or OLS regression models
+  - Bonferroni correction for treatment effects
+  - Placebo test
+  - Test for control conditions
+  - Test for type of adoption
+  - Test whether the panel dataset is balanced
+  - Test for parallel trend assumption
 - **Visualization**:
   - Plot observed and expected time course of treatment and control group
   - Plot expected time course of treatment group and counterfactual
   - Plot model coefficients with confidence intervals
   - Plot individual or group-specific treatment effects with confidence intervals
   - Visualize the temporal evolution of staggered treatments
-- **Diagnosis tools**:
-  - Test for control conditions
-  - Test for type of adoption
-  - Test whether the panel dataset is balanced
-  - Test for parallel trend assumption
 
 
 ## Examples
@@ -159,9 +159,21 @@ See the /tests directory for usage examples of most of the included functions.
   - Wooldridge JM (2012) *Introductory Econometrics. A Modern Approach*.
 
 
-## What's new (v2.2.7)
-- Functions
-  - diddata.DiffData.define_treatment() for constructing a new treatment from a column in the dataframe 
+## AI Usage Statement
+
+This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `Agents.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
+
+
+## What's new (v2.3.0)
+
+- General
+  - Full documentation (docstring in NumPy style) of all classes, methods, and functions
+  - Extended information in README
+- Extensions
+  - Timestamps for all methods creating or changing DiffGroups, DiffTreatment, DiffData and DiffModel objects
+  - Hyperparameters and other config information in didtools.model_wrapper() are now saved
+  - All summary methods return self
 - Bugfixes:
-  - didtools.treatment_times() and didtools.is_multiple_treatment_period() now also identify continuous treatments correctly
-  - Fixed problematic type conversion in didtools.fit_metrics()
+  - Correct check of input lists in didanalysis_helper functions create_spillover() and extract_model_results() 
+  - Correct check of input lists in DiffData methods add_covariates() and analysis()
+  - Correct check of input lists in didanalysis functions did_analysis() and ddd_analysis()

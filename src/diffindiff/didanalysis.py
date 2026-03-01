@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.4
-# Last update: 2026-02-26 18:04
+# Version:     2.3.0
+# Last update: 2026-03-01 11:23
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -30,6 +30,44 @@ class DiffModel:
         timestamp
         ):
 
+        """
+        Container class for DiD model results.
+
+        Parameters
+        ----------
+        did_modelresults : list
+            List containing the model results (coefficients, fixed effects, etc.).
+        did_modelconfig : dict
+            Configuration dictionary for the DiD model.
+        did_modeldata : pd.DataFrame
+            Panel data used for the estimation of the DiD model.
+        did_modelpredictions : pd.DataFrame
+            Predicted values of the DiD model.
+        did_model: statsmodels regression results object
+            The fitted DiD model object from statsmodels.
+        
+        Returns
+        -------
+        None
+            Constructor does not return a value; instance is initialized in-place.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model.summary()
+        """
+
         self.data = [
             did_modelresults, 
             did_modelconfig, 
@@ -40,6 +78,34 @@ class DiffModel:
             ]    
 
     def get_did_modeldata_df (self):
+        
+        """
+        Return the model data as a pandas DataFrame.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The DataFrame used for model estimation.
+
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D',
+        ...     pre_post=True
+        ... )
+        >>> model=curfew_data_prepost.analysis()
+        >>> modeldata_df=model.get_did_modeldata_df()
+        >>> print(modeldata_df.head())
+        """
+
         return pd.DataFrame(self.data[2])
     
     def treatment_statistics(
@@ -47,6 +113,45 @@ class DiffModel:
         treatment: str = None,
         after_treatment_col: str = None
         ):
+
+        """
+        Compute summary statistics about the treatment and study period.
+
+        Parameters
+        ----------
+        treatment : str, optional
+            Treatment name to analyse. If None, the first treatment in the model config is chosen.
+        after_treatment_col : str, optional
+            Column name of an after-treatment indicator, if present.
+
+        Returns
+        -------
+        list
+            [group_sizes, average_treatment_time, groups, treatment_timepoints, time_periods]
+
+        Raises
+        ------
+        ValueError
+            If a requested treatment is not present in the model object.
+
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D',
+        ...     pre_post=True
+        ... )
+        >>> model=curfew_data_prepost.analysis()
+        >>> model_treatment_statistics = model.treatment_statistics()
+        >>> print(model_treatment_statistics)
+        """
 
         model_config = self.data[1]
         model_data = self.data[2]
@@ -136,10 +241,34 @@ class DiffModel:
             time_periods
             ]
     
-    def treatment_diagnostics(
-        self
-        ):
-        
+    def treatment_diagnostics(self):
+
+        """
+        Assemble treatment diagnostics stored in the model configuration.
+
+        Returns
+        -------
+        list
+            [treatment_diagnostics_df, no_control_conditions]
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_treatment_diagnostics = model.treatment_diagnostics()
+        >>> print(model_treatment_diagnostics[0])
+        """
+
         model_config = self.data[1]
         treatment_diagnostics = model_config["treatment_diagnostics"]
         
@@ -171,10 +300,34 @@ class DiffModel:
             no_control_conditions
             ]
     
-    def data_diagnostics(
-        self
-        ):
-        
+    def data_diagnostics(self):
+
+        """
+        Return assembled data diagnostics from the model configuration.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Table with data diagnostic indicators.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_data_diagnostics = model.data_diagnostics()
+        >>> print(model_data_diagnostics)
+        """
+
         model_config = self.data[1]
         data_diagnostics = model_config["data_diagnostics"]
         
@@ -200,17 +353,43 @@ class DiffModel:
            
         return data_diagnostics_df   
     
-    def fit_metrics(
-        self
-        ):
+    def fit_metrics(self):
+
+        """
+        Compute and format fit metrics for the model predictions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Formatted DataFrame with selected fit metrics.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D',
+        ...     pre_post=True
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_fit_metrics = model.fit_metrics()
+        >>> print(model_fit_metrics)
+        """
+
         data = self.data[2]
         
         model_predictions = self.data[3]
-        
+
         model_config = self.data[1]
         outcome_col = model_config["outcome_col"]
         indep_vars_no = model_config["indep_vars_no"]
-        
+
         model_fit_metrics = helper.fit_metrics(
             data,
             outcome_col,
@@ -240,10 +419,34 @@ class DiffModel:
            
         return model_fit_metrics_df   
 
-    def treatment_effects(
-        self
-        ):       
-        
+    def treatment_effects(self):
+
+        """
+        Extract and format treatment effect estimates from model results.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Estimates with confidence intervals and p-values formatted for display.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_treatment_effects = model.treatment_effects()
+        >>> print(model_treatment_effects)
+        """
+
         model_results = self.data[0]
       
         treatment_effects_df = pd.DataFrame()
@@ -302,9 +505,34 @@ class DiffModel:
 
         return treatment_effects_df
 
-    def covariates(
-        self
-        ):
+    def covariates(self):
+
+        """
+        Return a DataFrame of covariate effect estimates if present.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            Covariates table or None if no covariates are present.
+
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D',
+        ...     pre_post=True
+        ... )
+        >>> model=curfew_data_prepost.analysis()
+        >>> model_covariates = model.covariates()
+        >>> print(model_covariates)
+        """
 
         model_results = self.data[0]
        
@@ -342,6 +570,41 @@ class DiffModel:
         time: bool = True,
         group: bool = True
         ):
+
+        """
+        Return fixed effects tables for units, time and group as requested.
+
+        Parameters
+        ----------
+        units : bool, optional
+            Include unit fixed effects table. Default is True.
+        time : bool, optional
+            Include time fixed effects table. Default is True.
+        group : bool, optional
+            Include group fixed effects table. Default is True.
+
+        Returns
+        -------
+        list
+            [unit_FE_df or None, time_FE_df or None, group_FE_df or None]
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_fixed_effects = model.fixed_effects()
+        >>> print(model_fixed_effects)
+        """
 
         model_results = self.data[0]
 
@@ -426,6 +689,32 @@ class DiffModel:
         
     def summary(self):
 
+        """
+        Print a readable summary of the DiD model including effects and diagnostics.
+
+        Returns
+        -------
+        DiffModel
+            Returns self to allow method chaining.
+
+        Examples
+        --------
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D',
+        ...     pre_post=True
+        ... )
+        >>> model=curfew_data_prepost.analysis()
+        >>> model.summary()
+        """
+
         model_config = self.data[1]
         no_covariates = len(model_config["covariates"])
         
@@ -459,8 +748,7 @@ class DiffModel:
         covariates_effects_df[config.COVARIATES_DESCRIPTION] = covariates_effects_df[config.COVARIATES_DESCRIPTION].str.ljust(width)
 
         print(covariates_effects_df.to_string(index=False, header=False))
-        print("-" * total_width)
-        
+        print("-" * total_width)        
 
         treatment_diagnostics = self.treatment_diagnostics()
         treatment_diagnostics_df = treatment_diagnostics[0]
@@ -481,8 +769,7 @@ class DiffModel:
             else:
                 print(f"NOTE: Treatments {', '.join(no_control_conditions)} have no control conditions.")  
 
-        print("-" * total_width)
-        
+        print("-" * total_width)        
 
         data_diagnostics_df = self.data_diagnostics()
 
@@ -492,8 +779,7 @@ class DiffModel:
         print(config.DATA_DIAGNOSTICS_DESCRIPTION)
         print(data_diagnostics_df.to_string(index=False, header=False))
 
-        print("-" * total_width)
-        
+        print("-" * total_width)        
 
         model_fit_metrics = self.fit_metrics()
 
@@ -528,6 +814,66 @@ class DiffModel:
         central_tendency: str = "mean"
         ):
            
+        """
+        Plot treatment effect estimates with confidence intervals.
+
+        Parameters
+        ----------
+        colors : list, optional
+            Color palette for points/bars. Default is ['blue', 'grey'].
+        colors_by_signficance : list, optional
+            Colors used to indicate significance thresholds. Default is ['red','coral','dimgray','silver','green','palegreen'].
+        point_type : str, optional
+            Marker type for point estimates. Default is 's'.
+        point_size : int, optional
+            Marker size for point estimates. Default is 8.
+        line_width : int, optional
+            Line width for error bars. Default is 6.
+        line_cap_size : int, optional
+            Cap size for error bars. Default is 5.
+        x_label : str, optional
+            Label for the x-axis. Default is 'Estimates with confidence intervals'.
+        y_label : str, optional
+            Label for the y-axis. Default is 'Coefficient'.
+        plot_title : str, optional
+            Plot title. Default is 'DiD effects'.
+        plot_grid : bool, optional
+            Show grid on plot. Default is True.
+        sort_by_coef : bool, optional
+            Sort effects by coefficient. Default is False.
+        sort_ascending : bool, optional
+            Sort order when sorting by coefficient. Default is True.
+        plot_size : list, optional
+            Figure size as [width, height]. Default is [7, 6].
+        scale_plot : bool, optional
+            Scale x-axis to fit estimates and intervals. Default is True.
+        show_central_tendency : bool, optional
+            Show mean/median line for estimates. Default is False.
+        central_tendency : str, optional
+            'mean' or 'median' for central tendency if shown. Default is 'mean'.
+
+        Returns
+        -------
+        DiffModel
+            Returns self to allow method chaining.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model.plot_treatment_effects()
+        """
+
         model_config = self.data[1]
 
         confint_alpha = model_config["confint_alpha"]    
@@ -601,7 +947,35 @@ class DiffModel:
         
         plt.show()
 
+        return self
+
     def is_parallel(self):
+
+        """
+        Proxy to tools.is_parallel using this model's data and config.
+
+        Returns
+        -------
+        statsmodels regression or None
+            The model used for the parallel trends test, if available.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_is_parallel=model.is_parallel()
+        >>> print(model_is_parallel)
+        """
 
         model_data = self.data[2]
         model_config = self.data[1]
@@ -621,8 +995,34 @@ class DiffModel:
             return None
     
     def predictions(self):
+        
+        """
+        Return model predictions (summary frame or array-like).
+
+        Returns
+        -------
+        pandas.DataFrame or array-like: Model predictions summary frame or array-like.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_predictions=model.predictions()
+        >>> print(model_predictions)
+        """
 
         model_predictions = self.data[3]
+
         return model_predictions
     
     def counterfactual(
@@ -631,6 +1031,44 @@ class DiffModel:
         after_treatment_col: str = None
         ):
         
+        """
+        Compute counterfactual predictions for the treatment group by setting treatment to zero.
+
+        Parameters
+        ----------
+        treatment : str, optional
+            Treatment name to analyse. If None, the first treatment is chosen.
+        after_treatment_col : str, optional
+            After-treatment indicator column name.
+
+        Returns
+        -------
+        list
+            [modified_model_data (DataFrame), outcome_pred_col (str), outcome_pred_cf_col (str)]
+
+        Raises
+        ------
+        ValueError
+            If requested treatment is not present in the model object.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_counterfactual=model.counterfactual()
+        >>> print(model_counterfactual[0])
+        """
+
         model_config = self.data[1]
         outcome_col = model_config["outcome_col"]
 
@@ -683,6 +1121,30 @@ class DiffModel:
         ]
 
     def didmodel(self):
+        
+        """
+        Return the fitted did model object (estimator/result).
+
+        Returns
+        -------
+        object: Underlying model object used for prediction.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> did_model=model.didmodel()
+        """
 
         did_model = self.data[4]
         return did_model
@@ -691,6 +1153,37 @@ class DiffModel:
         self,
         confint_alpha = 0.05
         ):
+
+        """
+        Return prediction intervals from the fitted model.
+
+        Parameters
+        ----------
+        confint_alpha : float, optional
+            Significance level for the intervals.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Summary frame with prediction and interval columns.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model_prediction_intervals=model.prediction_intervals()
+        >>> print(model_prediction_intervals)
+        """
 
         did_model = self.data[4]
 
@@ -709,6 +1202,52 @@ class DiffModel:
         resample: float = 1.0,
         random_state = 71
         ):
+
+        """
+        Run a placebo test by resampling control units and estimating a placebo DiD.
+
+        Parameters
+        ----------
+        treatment : str, optional
+            Treatment name to use for placebo assignment.
+        TG_col : str, optional
+            Column name identifying treatment group.
+        TT_col : str, optional
+            Column name identifying treatment time.
+        divide : float, optional
+            Share of control units to flip into placebo-treated (0<divide<=1).
+        resample : float, optional
+            Fraction of the divided group to sample when creating placebo units.
+        random_state : int, optional
+            Seed for random sampling.
+
+        Returns
+        -------
+        DiffModel
+            Resulting placebo analysis object.
+
+        Raises
+        ------
+        ValueError
+            If parameters are invalid or required TG/TT columns are missing.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> placebo_analysis=model.placebo()
+        >>> placebo_analysis.summary()
+        """
 
         model_config = self.data[1]
         model_data = self.data[2]
@@ -814,6 +1353,50 @@ class DiffModel:
         treatment_group_only = True
         ):
 
+        """
+        Plot treatment timing across units (timeline of intervention).
+
+        Parameters
+        ----------
+        treatment : str, optional
+            Treatment name to plot.
+        TG_col : str, optional
+            Column identifying treatment group.
+        x_label : str, optional
+            Label for the x-axis. Default is 'Time'.
+        y_label : str, optional
+            Label for the y-axis. Default is 'Analysis units'.
+        y_lim : tuple or list, optional
+            y-axis limits as (ymin, ymax). Default is None.
+        plot_title : str, optional
+            Plot title. Default is 'Treatment time'.
+        plot_symbol : str, optional
+            Symbol used for treatment timing points. Default is 'o'.
+        treatment_group_only : bool, optional
+            If True, only plot treated units.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Pivot table used for plotting (time x units).
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model.plot_timeline(treatment='Curfew')
+        """
+
         model_config = self.data[1]
         model_data = self.data[2]
 
@@ -885,6 +1468,71 @@ class DiffModel:
         pre_post_barplot = False,
         pre_post_bar_width = 0.5      
         ):
+
+        """
+        Plot observed and expected outcome series for treatment and control groups.
+
+        Parameters
+        ----------
+        treatment : str, optional
+            Which treatment to plot (if multiple are present).
+        x_label : str, optional
+            Label for the x-axis. Default is 'Time'.
+        y_label : str, optional
+            Label for the y-axis. Default is 'Outcome'.
+        y_lim : tuple or list, optional
+            y-axis limits as (ymin, ymax). Default is None.
+        plot_title : str, optional
+            Plot title. Default is 'Treatment group vs. control group'.
+        lines_col : list, optional
+            Colors for plotted lines. Default is ['blue','green','red','orange'].
+        lines_style : list, optional
+            Line styles for plotted lines. Default is ['solid','solid','dashed','dashed'].
+        lines_labels : list, optional
+            Labels for plotted series. Default includes observed and fit labels.
+        plot_legend : bool, optional
+            Show legend. Default is True.
+        plot_grid : bool, optional
+            Show grid. Default is True.
+        plot_observed : bool, optional
+            Plot observed series in addition to fits. Default is False.
+        plot_intervals : str, optional
+            'confint' or 'predict' to plot intervals. Default is 'confint'.
+        plot_intervals_groups : list, optional
+            Which groups to include intervals for, e.g., ['TG','CG']. Default is ['TG','CG'].
+        plot_size_auto : bool, optional
+            Let function pick figure size automatically. Default is True.
+        plot_size : list, optional
+            If not auto, figure size [width, height]. Default is [12,6].
+        pre_post_ticks : list, optional
+            Tick labels for pre/post barplot. Default is ['Pre','Post'].
+        pre_post_barplot : bool, optional
+            Plot pre-post as barplot. Default is False.
+        pre_post_bar_width : float, optional
+            Bar width when pre_post_barplot is True. Default is 0.5.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Aggregated data used for plotting (means by time and group).
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     treatment_name="Curfew",
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model.plot(treatment='Curfew')
+        """
 
         model_config = self.data[1]
         TG_col = model_config["TG_col"]
@@ -1212,6 +1860,59 @@ class DiffModel:
         plot_size: list = [12, 6]
         ):
 
+        """
+        Plot treatment-group mean prediction and counterfactual over time.
+
+        Parameters
+        ----------
+        treatment : str, optional
+            Treatment name to plot.
+        after_treatment_col : str, optional
+            After-treatment column name.
+        x_label : str, optional
+            Label for the x-axis. Default is 'Time'.
+        y_label : str, optional
+            Label for the y-axis. Default is 'Outcome'.
+        y_lim : tuple or list, optional
+            y-axis limits as (ymin, ymax). Default is None.
+        plot_title : str, optional
+            Plot title. Default is 'Treatment group Counterfactual'.
+        lines_col : list, optional
+            Colors for the plotted lines. Default is ['blue','green'].
+        lines_style : list, optional
+            Line styles for plotted lines. Default is ['solid','dashed'].
+        lines_labels : list, optional
+            Labels for plotted series. Default is ['TG','TG counterfactual'].
+        plot_legend : bool, optional
+            Show legend. Default is True.
+        plot_grid : bool, optional
+            Show grid. Default is True.
+        plot_size : list, optional
+            Figure size as [width, height]. Default is [12, 6].
+
+        Returns
+        -------
+        pandas.DataFrame
+            Mean predicted vs. counterfactual for treated units.
+
+        Examples
+        --------
+        >>> curfew_data=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col='county',
+        ...     time_col='infection_date',
+        ...     outcome_col='infections_cum_per100000',
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=['2020-03-01','2020-05-15'],
+        ...     treatment_period=['2020-03-21','2020-05-05'],
+        ...     treatment_name="Curfew",
+        ...     freq='D'
+        ... )
+        >>> model=curfew_data.analysis()
+        >>> model.plot_counterfactual(treatment='Curfew')
+        """
+
         model_config = self.data[1]
         TG_col = model_config["TG_col"]
         time_col = model_config["time_col"]
@@ -1327,10 +2028,10 @@ def did_analysis(
     time_col: str,
     treatment_col: list,
     outcome_col: str,
-    TG_col: list = [],
-    TT_col: list = [],
-    after_treatment_col: list = [],
-    ATT_col: list = [],
+    TG_col: list = None,
+    TT_col: list = None,
+    after_treatment_col: list = None,
+    ATT_col: list = None,
     pre_post: bool = False,
     log_outcome: bool = False,
     log_outcome_add = 0.01,
@@ -1344,20 +2045,133 @@ def did_analysis(
     ITT: bool = False,
     GTT: bool = False,
     group_by: str = None,
-    covariates: list = [],
-    spillover_treatment: list = [],
-    spillover_units: list = [],
+    covariates: list = None,
+    spillover_treatment: list = None,
+    spillover_units: list = None,
     placebo: bool = False,
     confint_alpha = 0.05,
     bonferroni: bool = False,
-    freq = "D",
-    date_format = "%Y-%m-%d",
+    freq: str = "D",
+    date_format: str = "%Y-%m-%d",
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
-    fit_by = "ols_fit",
+    fit_by: str = "ols_fit",
     verbose: bool = config.VERBOSE
     ):    
    
+    """
+    Perform a Difference-in-Differences analysis with a given data frame.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data containing units, time and outcome.
+    unit_col : str
+        Name of unit identifier column.
+    time_col : str
+        Name of time column.
+    treatment_col : list
+        Treatment column(s) names.
+    outcome_col : str
+        Outcome variable name.
+    TG_col : list
+        Treatment group indicator column(s).
+    TT_col : list
+        Treatment time indicator column(s).
+    after_treatment_col : list
+        Columns indicating post-treatment periods.
+    ATT_col : list
+        Columns for average treatment on the treated calculations.
+    pre_post : bool
+        Treat data as pre-post panel.
+    log_outcome : bool
+        Log-transform the outcome.
+    log_outcome_add : float
+        Constant to add before log transformation.
+    FE_unit : bool
+        Include unit fixed effects.
+    FE_time : bool
+        Include time fixed effects.
+    FE_group : bool
+        Include group fixed effects.
+    cluster_SE_by : str
+        Column name to cluster standard errors by.
+    intercept : bool
+        Include intercept in the model.
+    ITE : bool
+        Estimate individual treatment effects.
+    GTE : bool
+        Estimate group treatment effects.
+    ITT : bool
+        Include individual time trends.
+    GTT : bool
+        Include group-specific time trends.
+    group_by : str
+        Column name defining groups.
+    covariates : list
+        Additional covariate columns to include.
+    spillover_treatment : list
+        Treatment columns used to construct spillover variables.
+    spillover_units : list
+        Unit identifiers affected by spillovers.
+    placebo : bool
+        Run placebo analysis.
+    confint_alpha : float
+        Significance level for confidence intervals.
+    bonferroni : bool
+        Apply Bonferroni correction for multiple treatments.
+    freq : str
+        Frequency string for date handling.
+    date_format : str
+        Date format string.
+    drop_missing : bool
+        Drop missing observations before analysis.
+    missing_replace_by_zero : bool
+        Replace missing values by zero when requested.
+    fit_by : str
+        Fitting method; e.g., 'ols_fit' or 'ml'.
+    verbose : bool, optional
+            If True, print progress messages.
+
+    Returns
+    -------
+    DiffModel
+        Container object with model results, config, data and helpers.
+
+    Raises
+    ------
+    ValueError
+        If required arguments are missing or invalid.
+
+    Examples
+    --------
+    >>> Corona_Hesse=pd.read_excel("data/Corona_Hesse.xlsx")
+    >>> Hesse_model1=did_analysis(
+    ...     data=Corona_Hesse,
+    ...     unit_col="REG_NAME",
+    ...     time_col="infection_date",
+    ...     treatment_col="Nighttime_curfew",
+    ...     outcome_col="R7_rm",
+    ...     intercept=False
+    ...     )
+    >>> Hesse_model1.summary()
+    """
+
+    if TG_col is None:
+        TG_col = []
+    if TT_col is None:
+        TT_col = []
+    if after_treatment_col is None:
+        after_treatment_col = []
+    if ATT_col is None:
+        ATT_col = []
+    if covariates is None:        
+        covariates = []
+    if spillover_treatment is None:
+        spillover_treatment = []
+    if spillover_units is None:
+        spillover_units = []
+
     tools.check_columns(
         df = data,
         columns = [
@@ -1884,17 +2698,90 @@ def ddd_analysis(
     log_outcome_add = 0.01,
     FE_unit: bool = False,
     FE_time: bool = False,
-    covariates: list = [],
+    covariates: list = None,
     placebo: bool = False,
     confint_alpha = 0.05,
-    freq = "D",
-    date_format = "%Y-%m-%d",
+    freq: str = "D",
+    date_format: str = "%Y-%m-%d",
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
-    fit_by = "ols_fit",
+    fit_by: str = "ols_fit",
     verbose: bool = config.VERBOSE
     ):
     
+    """
+    Perform a Difference-in-difference-in-differences (DDD) analysis
+    with a given data frame.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data containing units, time and outcome.
+    unit_col : str
+        Name of unit identifier column.
+    time_col : str
+        Name of time identifier column.
+    outcome_col : str
+        Name of outcome variable column.
+    TG_col : str
+        Treatment group indicator column.
+    TT_col : str
+        Treatment time indicator column.
+    BG_col : str
+        Benefit/group identifier column.
+    pre_post : bool
+        Treat data as pre-post panel. Default is False.
+    log_outcome : bool
+        Log-transform the outcome. Default is False.
+    log_outcome_add : float
+        Constant added before log-transform when zeros present. Default is 0.01.
+    FE_unit : bool
+        Include unit fixed effects. Default is False.
+    FE_time : bool
+        Include time fixed effects. Default is False.
+    covariates : list
+        Additional covariate column names to include. Default is None.
+    placebo : bool
+        Run placebo analysis. Default is False.
+    confint_alpha : float
+        Significance level for confidence intervals. Default is 0.05.
+    freq : str
+        Frequency string for date handling. Default is 'D'.
+    date_format : str
+        Date format string. Default is '%Y-%m-%d'.
+    drop_missing : bool
+        Drop missing observations before analysis. Default is True.
+    missing_replace_by_zero : bool
+        Replace missing values by zero when requested. Default is False.
+    fit_by : str
+        Fitting method; e.g., 'ols_fit' or 'ml'. Default is 'ols_fit'.
+    verbose : bool
+        If True, print progress messages.
+
+    Returns
+    -------
+    DiffModel
+        Container with DDD model results, configuration, data and helpers.
+
+    Raises
+    ------
+    ValueError
+        If required columns are missing or invalid parameters are provided.
+
+    Examples
+    --------
+    >>> curfew_DE=pd.read_csv("data/curfew_DE.csv", sep=";", decimal=",")
+    >>> ddd_analysis(
+    ...     data=curfew_DE,
+    ...     unit_col="county",
+    ...     time_col="infection_date",
+    ...     outcome_col="infections_cum_per100000",
+    ...     TG_col="TG",
+    ...     TT_col="TT",
+    ...     BG_col="some_benefit_group_variable",
+    ... )
+    """
+
     tools.check_columns(
         df = data,
         columns = [
@@ -2108,7 +2995,6 @@ def ddd_analysis(
             data = data,
             formula = ddd_formula,
             confint_alpha = confint_alpha,
-            cluster_SE_by = cluster_SE_by,
             verbose = verbose
         )
     
@@ -2117,19 +3003,19 @@ def ddd_analysis(
         TG_col = TG_col,
         TT_col = TT_col,
         treatment_col = [TG_x_TT_col],
-        after_treatment_col = [],
-        ATT_col = [],
-        spillover_vars = [],
+        after_treatment_col = None,
+        ATT_col = None,
+        spillover_vars = None,
         FE_unit_vars = FE_unit_vars,
         dummy_unit_original = dummy_unit_original,
         FE_time_vars = FE_time_vars,
         dummy_time_original = dummy_time_original,
-        FE_group_vars = [],
-        dummy_group_original = [],
-        ITE_vars = [],
-        GTE_vars = [],
-        ITT_vars = [],
-        GTT_vars = [],
+        FE_group_vars = None,
+        dummy_group_original = None,
+        ITE_vars = None,
+        GTE_vars = None,
+        ITT_vars = None,
+        GTT_vars = None,
         TG_x_BG_x_TT_col = [TG_x_BG_x_TT_col],
         BG_col = [BG_col], 
         TG_x_BG_col = [TG_x_BG_col], 

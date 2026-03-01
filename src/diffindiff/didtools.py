@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.6
-# Last update: 2026-02-26 18:33
+# Version:     2.2.0
+# Last update: 2026-02-28 21:47
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -33,6 +33,34 @@ def check_columns(
     verbose: bool = config.VERBOSE
     ):
 
+    """
+    Check that the given columns exist in a DataFrame.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data frame to check.
+    columns : list
+        List of column names to verify.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    KeyError
+        If any column from ``columns`` is missing in ``df``.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'a':[1]})
+    >>> check_columns(df, ['a'])
+    """
+
     if len(columns) > 0:
         
         if verbose:
@@ -51,7 +79,35 @@ def is_numeric(
     columns: list,
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Check whether specified columns in a DataFrame are numeric.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data frame containing the columns.
+    columns : list
+        List of column names to check for numeric dtype.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    KeyError
+        If any column in ``columns`` is not numeric.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'x':[1,2]})
+    >>> is_numeric(df, ['x'])
+    """
+
     if len(columns) > 0:
         
         if verbose:
@@ -76,6 +132,32 @@ def panel_index(
     time_col: str,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Create a unit-time index.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data frame.
+    unit_col : str
+        Column name identifying units.
+    time_col : str
+        Column name identifying time periods.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The input data with a unit-time index column added if missing.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'unit':[1],'time':['2020-01-01']})
+    >>> panel_index(df, 'unit', 'time')
+    """
 
     to_str = []
 
@@ -123,6 +205,39 @@ def is_balanced(
     verbose: bool = config.VERBOSE
     ):
 
+    """
+    Check whether panel data are balanced with respect to relevant columns.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    outcome_col : str
+        Column name for outcome variable.
+    other_cols : list, optional
+        Additional columns that should be present for balance calculation.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    bool
+        True if balanced, False otherwise.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'u':[1,1],'t':[1,2],'y':[0,1]})
+    >>> is_balanced(df, 'u', 't', 'y')
+    """
+
+    if other_cols is None:
+        other_cols = []
+
     if verbose:
         print(f"Checking whether panel data is balanced with respect to {3+len(other_cols)} columns", end = " ... ")
 
@@ -155,6 +270,32 @@ def is_dummy(
     verbose: bool = config.VERBOSE
     ):
 
+    """
+    Test whether an iterable represents a binary dummy variable.
+
+    Parameters
+    ----------
+    iterable : Iterable
+        Iterable of values (e.g., list, Series) to test.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [is_binary (bool), unique_values (set)]
+
+    Raises
+    ------
+    ValueError
+        If ``iterable`` is not iterable.
+
+    Examples
+    --------
+    >>> is_dummy([0,1,1,0])
+    [True, {0, 1}]
+    """
+
     if not isinstance(iterable, Iterable):
         raise ValueError(f"Stated parameter 'iterable' is not iterable: {iterable}.")
     
@@ -183,7 +324,32 @@ def is_binary(
     treatment_col: str,
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Check whether a treatment column in a DataFrame is binary.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Data frame containing the treatment column.
+    treatment_col : str
+        Name of the treatment column.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [is_binary (bool), treatment_format (str)]
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'tr':[0,1,0]})
+    >>> is_binary(df, 'tr')
+    [True, 'Binary']
+    """
+
     if verbose:
         print(f"Checking whether treatment '{treatment_col}' is binary", end = " ... ")
     
@@ -223,6 +389,34 @@ def is_missing(
     fill_na = 0,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Check for missing values and optionally drop or replace them.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Data frame to inspect.
+    drop_missing : bool, optional
+        If True, drop rows with missing values in relevant columns.
+    missing_replace_by_zero : bool, optional
+        If True, replace missing values by ``fill_na``.
+    fill_na : any, optional
+        Value to replace missing values with when ``missing_replace_by_zero`` is True.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [missing_outcome_var (bool), missing_true_vars (list), data (DataFrame), drop_missing (bool), missing_replace_by_zero (bool)]
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame({'a':[1, None]})
+    >>> is_missing(df, drop_missing=True)
+    """
 
     if verbose:
         print("Checking whether data frame contains missing values", end = " ... ")
@@ -275,7 +469,35 @@ def is_simultaneous(
     treatment_col: str,
     pre_post: bool = False,
     verbose: bool = config.VERBOSE
-    ):   
+    ):
+    
+    """
+    Determine whether a treatment is simultaneous or staggered across units.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    treatment_col : str
+        Treatment column name.
+    pre_post : bool, optional
+        If True, treat data as pre-post (simultaneous).
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    bool
+        True if treatment is simultaneous, False if staggered.
+
+    Examples
+    --------
+    >>> is_simultaneous(df, 'unit', 'time', 'treat')
+    """
 
     if pre_post:
         
@@ -321,6 +543,30 @@ def is_notreatment(
     verbose: bool = config.VERBOSE
     ):
 
+    """
+    Check whether a treatment includes units with no treatment.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    treatment_col : str
+        Treatment column name.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [no_treatment (bool), treatment_group (list), control_group (list)]
+
+    Examples
+    --------
+    >>> is_notreatment(df, 'unit', 'treat')
+    """
+
     if verbose:
         print(f"Checking whether treatment '{treatment_col}' includes a {config.NO_TREATMENT_CG_DESCRIPTION}", end = " ... ")
 
@@ -357,7 +603,33 @@ def treatment_group_col(
     create_TG_col: str = "TG",
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Create a treatment-group indicator column in the data.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    treatment_col : str
+        Treatment column name.
+    create_TG_col : str, optional
+        Name for the created treatment-group column.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data (DataFrame), has_no_treatment (bool), created_column_name (str)]
+
+    Examples
+    --------
+    >>> treatment_group_col(df, 'unit', 'treat')
+    """
+
     isnotreatment = is_notreatment(
         data = data,
         unit_col = unit_col,
@@ -398,6 +670,34 @@ def treatment_time_col(
     verbose: bool = config.VERBOSE
     ):
 
+    """
+    Create a treatment-time indicator column marking treatment periods.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    treatment_col : str
+        Treatment column name.
+    create_TT_col : str, optional
+        Name for the created treatment-time column.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data (DataFrame), treatment_timepoints (list), created_column_name (str)]
+
+    Examples
+    --------
+    >>> treatment_time_col(df, 'unit', 'time', 'treat')
+    """
+
     tt = treatment_times(
         data = data,
         unit_col = unit_col,
@@ -421,6 +721,30 @@ def untreated_units(
     treatment_col: list,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Identify treated and untreated units for given treatment columns.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    treatment_col : list
+        List of treatment column names.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [no_units_treated (int), no_units_nontreated (int), units_treated (Series), units_nontreated (Series)]
+
+    Examples
+    --------
+    >>> untreated_units(df, 'unit', ['treat'])
+    """
 
     if verbose:
         print(f"Identifying treated and untreated units for treatment(s) {', '.join(treatment_col)}", end = " ... ")
@@ -452,7 +776,39 @@ def is_parallel(
     alpha = 0.05,
     verbose: bool = config.VERBOSE
     ):
- 
+
+    """
+    Test parallel trends for treatment and control groups.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    treatment_col : str
+        Treatment column name.
+    outcome_col : str
+        Outcome column name.
+    pre_post : bool, optional
+        If True, skip testing (pre-post design).
+    alpha : float, optional
+        Significance level for the test.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [parallel (bool|'not_tested'), fitted_ols_model or None]
+
+    Examples
+    --------
+    >>> is_parallel(df, 'unit', 'time', 'treat', 'y')
+    """
+
     modeldata_isnotreatment = is_notreatment(
         data = data,
         unit_col = unit_col,
@@ -515,7 +871,31 @@ def is_prepost(
     time_col: str,
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Check whether panel data is pre-post (<=2 timepoints per unit).
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    bool
+        True if pre-post, False otherwise.
+
+    Examples
+    --------
+    >>> is_prepost(df, 'unit', 'time')
+    """
+
     if verbose:
         print("Checking whether panel data is pre-post or multi-period", end = " ... ")
     
@@ -538,6 +918,30 @@ def is_multiple_treatment_period(
     treatment_col: str,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Check whether units experience multiple treatment periods.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    treatment_col : str
+        Treatment column name.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [multiple_treatment_period (bool), units_multiple (int), unit_treatment_periods (dict)]
+
+    Examples
+    --------
+    >>> is_multiple_treatment_period(df, 'unit', 'treat')
+    """
 
     if verbose:
         print(f"Checking treatment '{treatment_col}' for multiple treatment periods", end = " ... ")
@@ -585,7 +989,31 @@ def date_counter(
     new_col: str = config.TIME_COUNTER_COL,
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Create a numeric time counter column for unique dates.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Data frame containing the date column.
+    date_col : str
+        Column name with date values.
+    new_col : str, optional
+        Name for the created time counter column.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Data frame with the time counter column added.
+
+    Examples
+    --------
+    >>> date_counter(df, 'date')
+    """
+
     if new_col not in df.columns:
                
         if verbose:
@@ -621,6 +1049,30 @@ def date_counter(
 
 def unique(data):
 
+    """
+    Return sorted unique values from several container types.
+
+    Parameters
+    ----------
+    data : array-like or pandas object
+        Input data from which to extract unique values.
+
+    Returns
+    -------
+    list
+        Sorted unique values. Returns empty list for None or empty inputs.
+
+    Raises
+    ------
+    TypeError
+        If an unsupported data type is provided.
+
+    Examples
+    --------
+    >>> unique([1,2,2])
+    [1, 2]
+    """
+
     if data is None or (isinstance(data, (list, np.ndarray, pd.Series, pd.DataFrame)) and len(data) == 0):
         return []
     
@@ -652,6 +1104,37 @@ def treatment_times(
     treatment_col: str,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Identify treatment timepoints and per-unit treatment ranges.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    treatment_col : str
+        Treatment column name.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [units_tt (DataFrame with treatment_min/max per unit), tt (list of treatment timepoints)]
+
+    Raises
+    ------
+    KeyError
+        If required columns are missing.
+
+    Examples
+    --------
+    >>> treatment_times(df, 'unit', 'time', 'treat')
+    """
 
     check_columns(
         df = data,
@@ -734,12 +1217,51 @@ def model_wrapper(
     svr_kernel = "rbf",
     xgb_learning_rate = 0.1,
     lgbm_learning_rate = 0.1,
-    random_state = 71
+    random_state = 71,
+    verbose: bool = config.VERBOSE
     ):
+
+    """
+    Train a machine learning or OLS regression model and return predictions and metrics.
+
+    Parameters
+    ----------
+    y : array-like
+        Dependent variable values.
+    X : array-like
+        Independent variables (features).
+    model_type : str
+        One of: 'ols', 'olsbg', 'dtbg', 'rf', 'gb', 'knn', 'svr', 'xgb', 'lgbm'.
+    test_size : float, optional
+        Fraction of data to reserve for testing.
+    random_state : int, optional
+        Random seed for reproducibility.
+    Other parameters
+        Model-specific hyperparameters.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [y_pred (array), model (estimator), metrics (dict), params (dict)]
+
+    Raises
+    ------
+    ValueError
+        If ``model_type`` is not recognized.
+
+    Examples
+    --------
+    >>> model_wrapper(y, X, model_type='ols')
+    """
 
     if model_type not in ["ols", "olsbg", "dtbg", "rf", "gb", "knn", "svr", "xgb", "lgbm"]:
         raise ValueError("Please enter a valid model type ('ols', 'olsbg', 'dtbg', 'rf', 'gb', 'knn', 'svr', 'xgb', 'lgbm')")
     
+    if verbose:
+        print("Setting up training and testing data", end = " ... ")
+
     X_train, X_test, y_train, y_test = train_test_split(
         X, 
         y, 
@@ -747,6 +1269,10 @@ def model_wrapper(
         train_size = train_size,
         random_state = random_state
     )
+
+    if verbose:
+        print("OK")
+        print(f"Training {model_type} model", end = " ... ")
     
     model = None
     y_pred = None
@@ -801,18 +1327,40 @@ def model_wrapper(
         
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
+
+    if verbose:
+        print("OK")
     
     metrics = fit_metrics(
         observed = y_test, 
         expected = y_pred,        
         remove_nan = True,
-        verbose = False
-        )    
-
+        verbose = verbose
+        )
+    
+    params = {
+        "model_type": model_type,
+        "test_size": test_size,
+        "train_size": train_size,
+        "model_n_estimators": model_n_estimators,
+        "model_max_features": model_max_features,
+        "model_min_samples_split": model_min_samples_split,
+        "rf_max_depth": rf_max_depth,
+        "gb_iterations": gb_iterations,
+        "gb_max_depth": gb_max_depth,
+        "gb_learning_rate": gb_learning_rate,
+        "knn_n_neighbors": knn_n_neighbors,
+        "svr_kernel": svr_kernel,
+        "xgb_learning_rate": xgb_learning_rate,
+        "lgbm_learning_rate": lgbm_learning_rate,
+        "random_state": random_state
+        }
+    
     return [
         y_pred,
         model,
-        metrics
+        metrics,
+        params
         ]
 
 def fit_metrics(
@@ -823,6 +1371,41 @@ def fit_metrics(
     remove_nan: bool = True,
     verbose: bool = False
     ):
+
+    """
+    Calculate common fit metrics comparing observed and expected values.
+
+    Parameters
+    ----------
+    observed : array-like
+        Observed outcome values.
+    expected : array-like
+        Expected/predicted values.
+    indep_vars_no : int, optional
+        Number of independent variables (for adjusted R^2).
+    outcome_col : str, optional
+        Name of the outcome column used for labeling.
+    remove_nan : bool, optional
+        If True, drop pairs with NaNs before computing metrics.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [model_residuals (DataFrame), model_fit_metrics (dict)]
+
+    Raises
+    ------
+    AssertionError
+        If observed and expected differ in length.
+    ValueError
+        If observed or expected are not numeric, or contain NaNs when remove_nan is False.
+
+    Examples
+    --------
+    >>> fit_metrics([1,2], [1.1,1.9])
+    """
 
     observed_no = len(observed)
     expected_no = len(expected)
@@ -956,6 +1539,25 @@ def fit_metrics(
 
 def clean_column_name(value):
 
+    """
+    Clean a string to a safe column-style name (uppercase, alphanumeric, underscores).
+
+    Parameters
+    ----------
+    value : any
+        Value to convert to a cleaned column name. It will be converted to string.
+
+    Returns
+    -------
+    str
+        Cleaned column name in upper case containing only letters, digits and underscores.
+
+    Examples
+    --------
+    >>> clean_column_name('Col name (1)')
+    'COL_NAME_1'
+    """
+
     value = str(value).upper()
     value = re.sub(r'[^A-Z0-9_]', '_', value) 
     value = re.sub(r'_+', '_', value)        
@@ -963,20 +1565,99 @@ def clean_column_name(value):
     return value.strip('_')
 
 def clean_treatment_name(treatment_name):
-    
+
+    """
+    Sanitize a treatment name by replacing non-word characters with underscores.
+
+    Parameters
+    ----------
+    treatment_name : str
+        Treatment name to clean.
+
+    Returns
+    -------
+    str
+        Cleaned treatment name where non-alphanumeric characters are replaced by "_".
+
+    Raises
+    ------
+    TypeError
+        If ``treatment_name`` is not a string.
+
+    Examples
+    --------
+    >>> clean_treatment_name('treat:area-1')
+    'treat_area_1'
+    """
+
+    if not isinstance(treatment_name, str):
+        raise TypeError("Parameter 'treatment_name' must be a string")
+
     treatment_name = re.sub(r'\W+', "_", treatment_name)
-    
+
     return treatment_name
 
 def replace_prefix(s, prefix, replace):
-    
+
+    """
+    Replace the first occurrence of a prefix in a string.
+
+    Parameters
+    ----------
+    s : str
+        Input string.
+    prefix : str
+        Prefix to look for.
+    replace : str
+        Replacement string for the prefix.
+
+    Returns
+    -------
+    str
+        String with the prefix replaced if it was present, otherwise the original string.
+
+    Raises
+    ------
+    TypeError
+        If ``s``, ``prefix`` or ``replace`` are not strings.
+
+    Examples
+    --------
+    >>> replace_prefix('pre_value', 'pre_', '')
+    'value'
+    """
+
+    if not all(isinstance(x, str) for x in (s, prefix, replace)):
+        raise TypeError("Parameters 's', 'prefix' and 'replace' must be strings")
+
     if s.startswith(prefix):
         return s.replace(prefix, replace, 1)
-    
+
     return s
 
 def bool_to_YN(val):
-    
+
+    """
+    Convert a boolean to 'YES'/'NO'; pass through non-boolean values.
+
+    Parameters
+    ----------
+    val : any
+        Value to convert. If a boolean, it will be converted to the strings 'YES'/'NO'.
+
+    Returns
+    -------
+    str or any
+        'YES' or 'NO' for boolean inputs, otherwise the original value.
+
+    Examples
+    --------
+    >>> bool_to_YN(True)
+    'YES'
+    >>> bool_to_YN('maybe')
+    'maybe'
+    """
+
     if isinstance(val, bool):
         return "YES" if val else "NO"    
     else:        
@@ -986,23 +1667,46 @@ def check_date_format(
     dates: list = None, 
     date_format: str = "%Y-%m-%d"
     ):
-    
+
+    """
+    Validate whether date strings match a given format.
+
+    Parameters
+    ----------
+    dates : list, optional
+        Iterable of date strings to validate. If ``None``, treated as empty list.
+    date_format : str, optional
+        Format string compatible with ``datetime.strptime`` (default: "%Y-%m-%d").
+
+    Returns
+    -------
+    list
+        [invalid_dates_included (bool), invalid_dates (list of str)] where ``invalid_dates_included``
+        is True when one or more dates failed parsing and ``invalid_dates`` contains their
+        string representations.
+
+    Examples
+    --------
+    >>> check_date_format(['2020-01-01', '2020-02-30'])
+    [True, ['2020-02-30']]
+    """
+
     if dates is None:
         dates = []
-    
+
     invalid_dates_included = False
     invalid_dates = []
-    
+
     for date in dates:
         try:
             datetime.strptime(date, date_format)
         except (ValueError, TypeError):
             invalid_dates.append(date)
-    
+
     if len(invalid_dates) > 0:
         invalid_dates_included = True
         invalid_dates = [str(d) for d in invalid_dates]
-    
+
     return [
         invalid_dates_included,
         invalid_dates

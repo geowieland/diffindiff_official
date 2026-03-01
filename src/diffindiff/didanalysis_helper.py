@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.7
-# Last update: 2025-02-26 18:02
+# Version:     1.1.0
+# Last update: 2025-02-28 13:06
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -26,7 +26,38 @@ def create_fixed_effects(
     drop_first: bool = False,
     verbose: bool = config.VERBOSE
     ):
-     
+
+    """
+    Create dummy variables for fixed effects and attach them to the data.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Input data frame.
+    col : str
+        Column for which to create fixed-effect dummies.
+    type : {'unit','time','group'}, optional
+        Type of fixed effect to create.
+    drop_first : bool, optional
+        If True, drop the first dummy.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data_with_dummies (DataFrame), dummies_join (str), dummy_vars (list), dummy_original (list)]
+
+    Raises
+    ------
+    ValueError
+        If ``type`` is not supported.
+
+    Examples
+    --------
+    >>> create_fixed_effects(df, 'unit', type='unit')
+    """
+    
     if type not in config.FE_TYPES:
         raise ValueError(f"Parameter 'type' must be one of the following: {', '.join(config.FE_TYPES)}")
 
@@ -76,6 +107,38 @@ def create_specific_time_trends(
     type: str = "ITT",
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Create unit-specific time trend variables (interactions with a time counter).
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Input data frame.
+    time_col : str
+        Column name for time variable.
+    FE_vars : list
+        List of fixed-effect dummy column names to interact with time.
+    type : str, optional
+        Type label for the created trends: 'ITT' for individual-specific,
+        'GTT' for group-specific (default 'ITT').
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data_with_trends (DataFrame), join_string (str), trend_vars (Index)]
+
+    Raises
+    ------
+    ValueError
+        If ``type`` is not supported.
+
+    Examples
+    --------
+    >>> create_specific_time_trends(df, 'date', ['FE_A', 'FE_B'])
+    """
     
     if type not in config.TIME_TRENDS_TYPES:
         raise ValueError(f"Parameter 'type' must be one of the following: {', '.join(config.TIME_TRENDS_TYPES)}")
@@ -127,6 +190,38 @@ def create_specific_treatment_effects(
     type: str = "ITE",
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Create unit-specific treatment effect interaction variables.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Input data.
+    treatment_col : list
+        Treatment column names to interact with FE variables.
+    FE_vars : list
+        Fixed-effect dummy columns to interact.
+    type : str, optional
+        Type label for specific effects: 'ITE' for individual-specific,
+        'GTE' for group-specific (default 'ITE').
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data_with_interactions (DataFrame), join_string (str), interaction_vars (Index)]
+
+    Raises
+    ------
+    ValueError
+        If ``type`` is not supported.
+
+    Examples
+    --------
+    >>> create_specific_treatment_effects(df, ['treat'], ['FE_A'])
+    """
     
     if type not in config.SPECIFIC_EFFFECTS_TYPES:
         raise ValueError(f"Parameter 'type' must be one of the following: {', '.join(config.SPECIFIC_EFFFECTS_TYPES)}")
@@ -175,14 +270,56 @@ def create_spillover(
     time_col: str,
     treatment_col: list,
     TT_col: str = None,
-    spillover_treatment: list = [],
-    spillover_units: list = [],
+    spillover_treatment: list = None,
+    spillover_units: list = None,
     verbose: bool = config.VERBOSE
     ):
 
-    if spillover_treatment is None or spillover_treatment == []:
+    """
+    Create spillover indicator variables for given treatments and units.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data frame.
+    unit_col : str
+        Unit identifier column.
+    time_col : str
+        Time identifier column.
+    treatment_col : list
+        List of treatment column names to base spillovers on.
+    TT_col : str, optional
+        Treatment time column to use; created if not present.
+    spillover_treatment : list
+        Treatments to consider for spillover creation.
+    spillover_units : list
+        Units to be marked as spillover-exposed.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data_with_spillover (DataFrame), join_string (str), spillover_vars (list)]
+
+    Raises
+    ------
+    ValueError
+        If ``spillover_treatment`` or ``spillover_units`` are empty.
+
+    Examples
+    --------
+    >>> create_spillover(df, 'unit', 'time', ['treat'], spillover_treatment=['treat'], spillover_units=['u1'])
+    """
+    
+    if spillover_treatment is None:
+        spillover_treatment = []
+    if spillover_units is None:
+        spillover_units = []
+        
+    if len(spillover_treatment) == 0:
         raise ValueError("Parameter 'spillover_treatment' does not contain any treatment")
-    if spillover_units is None or treatment_col == []:
+    if len(spillover_units) == 0:
         raise ValueError("Parameter 'spillover_units' does not contain any treatment")
 
     if verbose:
@@ -238,11 +375,46 @@ def data_diagnostics(
     unit_col: str,
     time_col: str,
     outcome_col: str,
-    cols_relevant: list = [],
+    cols_relevant: list = None,
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     verbose: bool = config.VERBOSE
     ):
+
+    """
+    Run diagnostics on model data: missingness, balance and basic stats.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Unit id column.
+    time_col : str
+        Time column.
+    outcome_col : str
+        Outcome variable name.
+    cols_relevant : list, optional
+        List of further relevant columns considered for balance checks.
+    drop_missing : bool, optional
+        If True, drop missing observations.
+    missing_replace_by_zero : bool, optional
+        If True, replace missing values with zero.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    dict
+        Dictionary of diagnostic indicators (balanced, missing, prepost, statistics...).
+
+    Examples
+    --------
+    >>> data_diagnostics(df, 'unit', 'time', 'y')
+    """
+
+    if cols_relevant is None:
+        cols_relevant = []
 
     modeldata_ismissing = tools.is_missing(
         data, 
@@ -310,6 +482,39 @@ def treatment_diagnostics(
     verbose: bool = config.VERBOSE    
     ):
     
+    """
+    Compute diagnostics for each treatment: simultaneity, parallel trends, 
+    binary format, etc.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Unit id column.
+    time_col : str
+        Time column.
+    treatment_col : list
+        List of treatment column names.
+    outcome_col : str
+        Outcome variable name used for tests.
+    pre_post : bool, optional
+        If True, data are treated as pre-post (skip some tests).
+    confint_alpha : float, optional
+        Significance level for parallel trends test.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [treatment_diagnostics_results (dict), staggered_adoption (bool), untreated (list)]
+
+    Examples
+    --------
+    >>> treatment_diagnostics(df, 'unit', 'time', ['treat'], 'y')
+    """
+
     if verbose:
         print("Treatment diagnostics:")
 
@@ -416,6 +621,32 @@ def ols_fit(
     verbose: bool = config.VERBOSE
     ):
     
+    """
+    Estimate an OLS model using a formula and return coefficients and predictions.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Data frame for estimation.
+    formula : str
+        Formula for the regression, e.g., 'y ~ x'.
+    confint_alpha : float, optional
+        Confidence level for intervals.
+    cluster_SE_by : str, optional
+        Column name used for clustering standard errors.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [ols_model, coef, coef_se, tvalues, pvalues, conf_int, predictions]
+
+    Examples
+    --------
+    >>> ols_fit(df, 'y ~ x')
+    """
+
     if verbose:
         print("Estimating model via Ordinary Least Squares", end = " ... ")  
     
@@ -463,6 +694,32 @@ def ml_fit(
     verbose: bool = config.VERBOSE
     ):
     
+    """
+    Estimate a model by maximum likelihood (GLM) and return coefficients and predictions.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Data frame for estimation.
+    formula : str
+        Formula describing the model, e.g., 'y ~ x'.
+    confint_alpha : float, optional
+        Confidence level for intervals.
+    family, link : statsmodels.family, optional
+        Family and link used for GLM.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [coef, coef_se, zvalues, pvalues, conf_int, predictions]
+
+    Examples
+    --------
+    >>> ml_fit(df, 'y ~ x')
+    """
+
     if verbose:
         print("Estimating model via Maximum Likelihood", end = " ... ")  
     
@@ -500,30 +757,95 @@ def ml_fit(
     
 def extract_model_results(
     fit_result,
-    TG_col: list = [],
-    TT_col: list = [],
-    treatment_col: list = [],
-    after_treatment_col: list = [],
-    ATT_col: list = [],
-    spillover_vars: list = [],
-    FE_unit_vars: list = [],
-    dummy_unit_original: list = [],
-    FE_time_vars: list = [],
-    dummy_time_original: list = [],
-    FE_group_vars: list = [],
-    dummy_group_original: list = [],
-    ITE_vars: list = [],
-    GTE_vars: list = [],
-    ITT_vars: list = [],
-    GTT_vars: list = [],
-    TG_x_BG_x_TT_col: list = [],
-    BG_col: list = [], 
-    TG_x_BG_col: list = [], 
-    BG_x_TT_col: list = [],
-    covariates: list = [],
+    TG_col: list = None,
+    TT_col: list = None,
+    treatment_col: list = None,
+    after_treatment_col: list = None,
+    ATT_col: list = None,
+    spillover_vars: list = None,
+    FE_unit_vars: list = None,
+    dummy_unit_original: list = None,
+    FE_time_vars: list = None,
+    dummy_time_original: list = None,
+    FE_group_vars: list = None,
+    dummy_group_original: list = None,
+    ITE_vars: list = None,
+    GTE_vars: list = None,
+    ITT_vars: list = None,
+    GTT_vars: list = None,
+    TG_x_BG_x_TT_col: list = None,
+    BG_col: list = None, 
+    TG_x_BG_col: list = None, 
+    BG_x_TT_col: list = None,
+    covariates: list = None,
     verbose: bool = config.VERBOSE
     ):
-    
+
+    """
+    Compile and format model coefficient results into a structured dict.
+
+    Parameters
+    ----------
+    fit_result : list
+        Result returned by ``ols_fit`` or ``ml_fit``.
+    Other parameters
+        Lists of variable names used to identify coefficients (TG_col, TT_col, etc.).
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    dict
+        Structured model results keyed by effect type.
+
+    Examples
+    --------
+    >>> extract_model_results(fit_result, TG_col=['TG'], treatment_col=['treat'])
+    """
+
+    if TG_col is None:
+        TG_col = []
+    if TT_col is None:
+        TT_col = []
+    if treatment_col is None:
+        treatment_col = []
+    if after_treatment_col is None:
+        after_treatment_col = []
+    if ATT_col is None:
+        ATT_col = []
+    if spillover_vars is None:
+        spillover_vars = []
+    if FE_unit_vars is None:
+        FE_unit_vars = []
+    if dummy_unit_original is None:
+        dummy_unit_original = []
+    if FE_time_vars is None:
+        FE_time_vars = []
+    if dummy_time_original is None:
+        dummy_time_original = []
+    if FE_group_vars is None:
+        FE_group_vars = []
+    if dummy_group_original is None:
+        dummy_group_original = []
+    if ITE_vars is None:
+        ITE_vars = []
+    if GTE_vars is None:
+        GTE_vars = []
+    if ITT_vars is None:    
+        ITT_vars = []
+    if GTT_vars is None:
+        GTT_vars = []
+    if TG_x_BG_x_TT_col is None:
+        TG_x_BG_x_TT_col = []
+    if BG_col is None:
+        BG_col = []
+    if TG_x_BG_col is None:
+        TG_x_BG_col = []
+    if BG_x_TT_col is None:
+        BG_x_TT_col = []
+    if covariates is None:
+        covariates = []
+
     if verbose:
         print("Compiling model results", end = " ... ")
 
@@ -896,7 +1218,31 @@ def fit_metrics(
     model_predictions,
     indep_vars_no: int = None
     ):
-    
+
+    """
+    Compute fit metrics for a model given data and predictions.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Original data used for observed values.
+    outcome_col : str
+        Name of the observed outcome column in ``data``.
+    model_predictions : object
+        Predictions summary frame returned by statsmodels or similar.
+    indep_vars_no : int, optional
+        Number of independent variables (for adjusted R^2).
+
+    Returns
+    -------
+    list
+        Result from ``tools.fit_metrics``: [residuals_df, metrics_dict].
+
+    Examples
+    --------
+    >>> fit_metrics(df, 'y', predictions)
+    """
+
     model_predictions = pd.DataFrame(model_predictions)
     model_predictions = model_predictions.reset_index()
     model_predictions.rename(columns = {config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[0]: f"{outcome_col}{config.DELIMITER}{config.EXPECTED_SUFFIX}"}, inplace = True)
@@ -919,11 +1265,40 @@ def fit_metrics(
 
 def create_timestamp(function):
 
+    """
+    Create a standard timestamp dictionary for logging or metadata.
+
+    Parameters
+    ----------
+    function : str or callable
+        Name of the function (string) or a callable object whose ``__name__`` will be used.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys ``package_version``, ``function`` and ``datetime``.
+
+    Raises
+    ------
+    TypeError
+        If ``function`` is neither a string nor a callable.
+
+    Examples
+    --------
+    >>> create_timestamp('did_analysis')
+    {'package_version': 'diffindiff 2.3.0', 'function': 'create_data', 'datetime': '2026-02-27 18-00-00'}
+    """
+
+    if not isinstance(function, str) and not callable(function):
+        raise TypeError("Parameter 'function' must be a string or a callable")
+
     now = datetime.now()
+
+    function_name = function.__name__ if callable(function) else function
 
     timestamp_dict = {
         "package_version": f"{config.PACKAGE_NAME} {config.PACKAGE_VERSION}",
-        "function": function,
+        "function": function_name,
         "datetime": now.strftime("%Y-%m-%d %H-%M-%S")
     }
 

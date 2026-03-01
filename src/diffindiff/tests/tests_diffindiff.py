@@ -4,11 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.0.11
-# Last update: 2026-02-20 17:44
+# Version:     2.0.12
+# Last update: 2026-03-01 11:29
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
+"""
+Please note that this tests script is a collection of examples for the use of most functions of the diffindiff package. 
+Although the data is real (i.e., non-simulated), no results relevant to the real world can be derived from it.
+"""
 
 import pandas as pd
 from diffindiff.didanalysis import did_analysis
