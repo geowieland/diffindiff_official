@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.0
-# Last update: 2026-02-28 21:47
+# Version:     2.2.1
+# Last update: 2026-03-03 17:34
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -434,7 +434,7 @@ def is_missing(
     if len(missing_true_vars) > 0:
         print(f"WARNING: Data frame contains columns with missing values: {', '.join(missing_true_vars)}.")
 
-    if drop_missing and not missing_replace_by_zero:
+    if drop_missing and not missing_replace_by_zero and len(missing_true_vars) > 0:
         
         if verbose:
             print("Dropping rows with missing values", end = " ... ")
@@ -521,9 +521,16 @@ def is_simultaneous(
         treatment_group = data_isnotreatment[1]
         data_TG = data[data[unit_col].isin(treatment_group)]
 
-        data_TG_pivot = data_TG.pivot_table (index = time_col, columns = unit_col, values = treatment_col)
+        data_TG_pivot = data_TG.pivot_table(
+            index = time_col,
+            columns = unit_col, 
+            values = treatment_col
+            )
 
-        simultaneous = (data_TG_pivot.nunique(axis=1) == 1).all()
+        if config.ACCEPT_CONTINUOUS_TREATMENTS:
+            simultaneous = (data_TG_pivot.nunique(axis=1) > 0).all()
+        else:
+            simultaneous = (data_TG_pivot.nunique(axis=1) == 1).all()
 
     if verbose:
         print("OK")
@@ -825,34 +832,67 @@ def is_parallel(
     
     treatment_group = modeldata_isnotreatment[1]
 
-    if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)]) > 0:
+    if config.ACCEPT_CONTINUOUS_TREATMENTS:
         
-        first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)][time_col])
+        if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] > 0)]) > 0:
         
-        data_test = data[data[time_col] < first_day_of_treatment].copy()
-        data_test[config.TG_COL] = 0
-        data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
-        
-        if config.TIME_COUNTER_COL not in data_test.columns:
-            data_test = date_counter(
-                df = data_test,
-                date_col = time_col, 
-                new_col = config.TIME_COUNTER_COL,
-                verbose = False
-                )
-        data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]        
+            first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] > 0)][time_col])
+            
+            data_test = data[data[time_col] < first_day_of_treatment].copy()
+            data_test[config.TG_COL] = 0
+            data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
+            
+            if config.TIME_COUNTER_COL not in data_test.columns:
+                data_test = date_counter(
+                    df = data_test,
+                    date_col = time_col, 
+                    new_col = config.TIME_COUNTER_COL,
+                    verbose = False
+                    )
+            data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]        
 
-        test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
-        coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
+            test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
+            coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
 
-        if coef_TG_x_t_p < alpha:
-            parallel = False
+            if coef_TG_x_t_p < alpha:
+                parallel = False
+            else:
+                parallel = True
+        
         else:
-            parallel = True
+            parallel = "not_tested"
+            test_ols_model = None
         
     else:
-        parallel = "not_tested"
-        test_ols_model = None
+
+        if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)]) > 0:
+            
+            first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)][time_col])
+            
+            data_test = data[data[time_col] < first_day_of_treatment].copy()
+            data_test[config.TG_COL] = 0
+            data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
+            
+            if config.TIME_COUNTER_COL not in data_test.columns:
+                data_test = date_counter(
+                    df = data_test,
+                    date_col = time_col, 
+                    new_col = config.TIME_COUNTER_COL,
+                    verbose = False
+                    )
+            data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]        
+
+            test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
+            coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
+
+            if coef_TG_x_t_p < alpha:
+                parallel = False
+            else:
+                parallel = True
+            
+        else:
+            parallel = "not_tested"
+            test_ols_model = None
     
     if verbose:
         print("OK")

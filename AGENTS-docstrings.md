@@ -4,8 +4,8 @@ purpose: Generate standardized Python docstrings in the diffindiff package
 author: Thomas Wieland  
         ORCID 0000-0001-5168-9846  
         mail geowieland@googlemail.com    
-version: 1.0.1  
-last_update: 2026-02-29 09:39  
+version: 1.0.2  
+last_update: 2026-03-03 17:28  
 ---
 
 # Agent: Python Docstring Generator

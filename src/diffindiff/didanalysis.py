@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.0
-# Last update: 2026-03-01 11:23
+# Version:     2.3.1
+# Last update: 2026-03-03 17:46
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -186,12 +186,23 @@ class DiffModel:
         study_period_end = study_period_end.date()
         study_period_N = model_data[time_col].nunique()
         
-        if len(model_data[model_data[treatment] == 1]) > 0:
-            treatment_period_start = pd.to_datetime(min(model_data[model_data[treatment] == 1][time_col]))
-            treatment_period_end = pd.to_datetime(max(model_data[model_data[treatment] == 1][time_col]))
-            treatment_period_N = model_data.loc[model_data[treatment] == 1, time_col].nunique()
+        if config.ACCEPT_CONTINUOUS_TREATMENTS:
+            
+            if len(model_data[model_data[treatment] > 0]) > 0:
+                treatment_period_start = pd.to_datetime(min(model_data[model_data[treatment] > 0][time_col]))
+                treatment_period_end = pd.to_datetime(max(model_data[model_data[treatment] > 0][time_col]))
+                treatment_period_N = model_data.loc[model_data[treatment] > 0, time_col].nunique()
+            else:
+                treatment_period_N = 0
+        
         else:
-            treatment_period_N = 0
+        
+            if len(model_data[model_data[treatment] == 1]) > 0:
+                treatment_period_start = pd.to_datetime(min(model_data[model_data[treatment] == 1][time_col]))
+                treatment_period_end = pd.to_datetime(max(model_data[model_data[treatment] == 1][time_col]))
+                treatment_period_N = model_data.loc[model_data[treatment] == 1, time_col].nunique()
+            else:
+                treatment_period_N = 0
             
         after_treatment_period_start = None
         after_treatment_period_end = None
@@ -200,7 +211,10 @@ class DiffModel:
             after_treatment_period_start = treatment_period_end+pd.Timedelta(days=1)
             after_treatment_period_start = pd.to_datetime(after_treatment_period_start)
             after_treatment_period_end = pd.to_datetime(study_period_end)
-            after_treatment_period_N = model_data.loc[model_data[after_treatment_col] == 1, time_col].nunique()            
+            if config.ACCEPT_CONTINUOUS_TREATMENTS:
+                after_treatment_period_N = model_data.loc[model_data[after_treatment_col] > 0, time_col].nunique()
+            else:
+                after_treatment_period_N = model_data.loc[model_data[after_treatment_col] == 1, time_col].nunique()
             after_treatment_period_start = after_treatment_period_start.strftime(model_config["date_format"])
             after_treatment_period_end = after_treatment_period_end.strftime(model_config["date_format"])
             
@@ -1422,7 +1436,12 @@ class DiffModel:
         modeldata_pivot.index = pd.to_datetime(modeldata_pivot.index)
 
         for i, col in enumerate(modeldata_pivot.columns):
-            time_points_treatment = modeldata_pivot.index[modeldata_pivot[col] == 1]
+            
+            if config.ACCEPT_CONTINUOUS_TREATMENTS:
+                time_points_treatment = modeldata_pivot.index[modeldata_pivot[col] > 0]
+            else:
+                time_points_treatment = modeldata_pivot.index[modeldata_pivot[col] == 1]
+            
             values = [i] * len(time_points_treatment)
             ax.plot(time_points_treatment, values, plot_symbol, label=col)
 
@@ -2230,16 +2249,20 @@ def did_analysis(
     treatment_diagnostics = treatment_diagnostics_results[0]
     staggered_adoption = treatment_diagnostics_results[1]
     
-    if no_treatments > 1:
-        FE_unit = True
+    if no_treatments > 1:        
+        
         intercept = False
-        TG_col = []
-        print("NOTE: Quasi-experiment includes more than one treatment. Unit fixed effects are used instead of control group baseline and treatment group deviation.")
-           
+        TG_col = []        
+        
+        if not FE_unit:
+            FE_unit = True
+            print("NOTE: Quasi-experiment includes more than one treatment. Unit fixed effects are used instead of control group baseline and treatment group deviation.")
+                       
     if ITE:
         
-        FE_unit = True
-        print("NOTE: Model includes individual treatment effects. Unit fixed effects are included.")
+        if not FE_unit:
+            FE_unit = True
+            print("NOTE: Model includes individual treatment effects. Unit fixed effects are included.")
         
         if GTE:
             GTE = False
@@ -2247,15 +2270,15 @@ def did_analysis(
     
     if ITT:
         
-        FE_unit = True
-        
         TT_col = []
         
-        print("NOTE: Model includes individual time trends. Unit fixed effects are included. Treatment time variable is dropped.")
+        if not FE_unit:
+            FE_unit = True
+            print("NOTE: Model includes individual time trends. Unit fixed effects are included. Treatment time variable is dropped.")
         
         if FE_time:
             FE_time = False
-            print("NOTE: Time fixed effects are dropped.")
+            print("NOTE: Model includes individual time trends. Time fixed effects are dropped.")
         
         if GTT:
             GTT = False
@@ -2263,10 +2286,11 @@ def did_analysis(
             
     if staggered_adoption:
         
+        if not FE_unit or not FE_time:
+            print("NOTE: Quasi-experiment includes one or more staggered treatments. Two-way fixed effects model is used.")
+            
         FE_unit = True
-        FE_time = True        
-        
-        print("NOTE: Quasi-experiment includes one or more staggered treatments. Two-way fixed effects model is used.")
+        FE_time = True      
     
     if GTT or GTE:        
         FE_group = True
@@ -2277,10 +2301,13 @@ def did_analysis(
     if FE_time:
         TT_col = []
         
-    if FE_group:    
+    if FE_group:
+        
+        if intercept or len(TG_col) > 0:
+            print("NOTE: Quasi-experiment includes group fixed effects. Control group baseline and treatment group deviation are dropped.")   
+            
         TG_col = []        
-        intercept = False
-        print("NOTE: Quasi-experiment includes group fixed effects. Control group baseline and treatment group deviation are dropped.")   
+        intercept = False        
     
     if after_treatment_col is not None or (isinstance (after_treatment_col, list) and len(after_treatment_col) > 0):
 

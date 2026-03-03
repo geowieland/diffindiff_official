@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.0
-# Last update: 2026-03-01 20:04
+# Version:     2.2.1
+# Last update: 2026-03-03 17:43
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1420,25 +1420,25 @@ class DiffData:
 
         Examples
         --------
-        >>> Sensoria_Daten=did.create_data(
-        ...     outcome_data=Tourismusdaten_Tabelle,
-        ...     unit_id_col="Gemeinde",
-        ...     time_col="Jahr_Monat",
-        ...     outcome_col="Gaesteuebernachtungen_insgesamt",
-        ...     treatment_group=Tourismusdaten_Tabelle.loc[Tourismusdaten_Tabelle["Gemeinde"] == "255023 Holzminden,Stadt"]["Gemeinde"],
-        ...     control_group=Tourismusdaten_Tabelle.loc[Tourismusdaten_Tabelle["Gemeinde"] != "255023 Holzminden,Stadt"]["Gemeinde"],
-        ...     study_period=["2023-01-01", "2025-10-01"],
-        ...     treatment_period=["2024-09-01", "2025-10-01"],
-        ...     freq="MS",    
-        ...     treatment_name="Sensoria_geoeffnet",
+        >>> curfew_data_prepost=create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True
         ...     )
-        >>> Sensoria_Daten.add_covariates(
-        ...     additional_df=Tourismusdaten_Tabelle,
-        ...     variables=["Schlafgelegenheitentage_angeboten", "Event_Tage"],
-        ...     unit_col = "Gemeinde",
-        ...     time_col="Jahr_Monat",
+        >>> curfew_data_prepost_withcov = curfew_data_prepost.add_covariates(
+        ...     additional_df=counties_DE, 
+        ...     unit_col="county",
+        ...     time_col=None, 
+        ...     variables=["comm_index", "TourPer1000"]
         ...     )
-        >>> Sensoria_Daten.define_treatment("Event_Tage")
+        >>> curfew_data_prepost_withcov.define_treatment("TourPer1000")
         """
 
         if not treatment_name:            
@@ -1798,7 +1798,8 @@ class DiffData:
 
     def analysis(
         self, 
-        log_outcome: bool = False, 
+        log_outcome: bool = False,
+        log_outcome_add: float = 0.01,
         FE_unit: bool = False, 
         FE_time: bool = False,
         cluster_SE_by: str = None,
@@ -1825,6 +1826,8 @@ class DiffData:
         ----------
         log_outcome : bool, optional
             If True, log-transform the outcome variable before estimation.
+        log_outcome_add : float, optional
+            Add a constant to outcome variable before log-transform.
         FE_unit : bool, optional
             Include unit fixed effects.
         FE_time : bool, optional
@@ -1914,7 +1917,7 @@ class DiffData:
                 BG_col = config.BG_COL,
                 outcome_col = outcome_col_original,
                 log_outcome = log_outcome,
-                log_outcome_add = 0.01,
+                log_outcome_add = log_outcome_add,
                 FE_unit = FE_unit,
                 FE_time = FE_time,                
                 covariates = covariates,
@@ -1961,6 +1964,7 @@ class DiffData:
                 ATT_col = ATT_col,
                 pre_post = treatment_meta["pre_post"],
                 log_outcome = log_outcome,
+                log_outcome_add = log_outcome_add,
                 FE_unit = FE_unit,
                 FE_time = FE_time,
                 cluster_SE_by = cluster_SE_by,
@@ -2225,7 +2229,7 @@ def create_data(
     missing_replace_by_zero : bool, optional
         If True, replace missing values by zero when requested. Default is False.
     verbose : bool, optional
-        If True, print progress messages. Default follows package config.
+        If True, print progress messages.
 
     Returns
     -------

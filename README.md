@@ -19,7 +19,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -44,10 +44,11 @@ pip install git+https://github.com/geowieland/diffindiff_official.git
   - Create ready-to-fit DiD data objects
   - Create predictive counterfactuals
 - **DiD analysis**: 
-  - Perfom standard DiD analysis with pre-post data
-  - Perfom DiD analysis with two-way fixed effects models
+  - Perform standard DiD analysis with pre-post data
+  - Perform DiD analysis with two-way fixed effects models
   - Simultaneous and/or staggered adoption are supported
   - Single or multiple treatments are supported
+  - Binary or continuous treatments are supported
   - Model extensions for DiD analysis:
     - Group- or individual-specific treatment effects
     - Group- or individual-specific time trends
@@ -58,10 +59,10 @@ pip install git+https://github.com/geowieland/diffindiff_official.git
   - Add own counterfactuals or create counterfactuals based on machine learning or OLS regression models
   - Bonferroni correction for treatment effects
   - Placebo test
-  - Test for control conditions
-  - Test for type of adoption
-  - Test whether the panel dataset is balanced
-  - Test for parallel trend assumption
+  - Test for control conditions (automatically within analysis or stand-alone)
+  - Test for type of adoption (automatically within analysis or stand-alone)
+  - Test whether the panel dataset is balanced (automatically within analysis or stand-alone)
+  - Test for parallel trend assumption (automatically within analysis or stand-alone)
 - **Visualization**:
   - Plot observed and expected time course of treatment and control group
   - Plot expected time course of treatment group and counterfactual
@@ -161,19 +162,16 @@ See the /tests directory for usage examples of most of the included functions.
 
 ## AI Usage Statement
 
-This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `Agents.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
+This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.3.0)
+## What's new (v2.3.1)
 
-- General
-  - Full documentation (docstring in NumPy style) of all classes, methods, and functions
-  - Extended information in README
-- Extensions
-  - Timestamps for all methods creating or changing DiffGroups, DiffTreatment, DiffData and DiffModel objects
-  - Hyperparameters and other config information in didtools.model_wrapper() are now saved
-  - All summary methods return self
 - Bugfixes:
-  - Correct check of input lists in didanalysis_helper functions create_spillover() and extract_model_results() 
-  - Correct check of input lists in DiffData methods add_covariates() and analysis()
-  - Correct check of input lists in didanalysis functions did_analysis() and ddd_analysis()
+  - didtools.is_missing(): No "Removing NA" note anymore when no missing values occur
+  - didanalyis.did_analysis(): No "xx fixed effects included" notes anymore when FE_unit and/or FE_time are already set to True by user
+  - DiffModel methods treatment_statistics() and plot_timeline() now accept continuous treatments (value of treatment variable > 0)
+  - didtools function is_parallel() now accepts continuous treatments (value of treatment variable > 0)
+  - Added parameter log_outcome_add in method DiffData.analysis()
+  - Corrected examples in docstrings
+  - Corrected typos in README
