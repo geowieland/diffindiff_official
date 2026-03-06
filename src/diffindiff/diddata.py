@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.1
-# Last update: 2026-03-03 17:43
+# Version:     2.2.2
+# Last update: 2026-03-06 21:27
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -174,7 +174,7 @@ class DiffGroups:
     def add_segmentation(
         self,
         group_benefit: list,
-        verbose: bool = config.VERBOSE       
+        verbose: bool = False       
         ):
         
         """
@@ -236,7 +236,7 @@ def create_groups(
     treatment_group,
     control_group,
     treatment_name: str = None,
-    verbose: bool = config.VERBOSE
+    verbose: bool = False
     ):
 
     """
@@ -538,7 +538,7 @@ def create_treatment(
     treatment_name: str = None,
     pre_post: bool = False,
     after_treatment_period: bool = False,
-    verbose = config.VERBOSE
+    verbose = False
     ): 
        
     """
@@ -1181,7 +1181,7 @@ class DiffData:
             print(f"WARNING: Additional data frame includes duplicate column names: {', '.join(existing_variables)}")
         
         return self
-
+   
     def add_treatment(
         self,
         treatment_name: str,
@@ -1190,7 +1190,7 @@ class DiffData:
         control_group,
         after_treatment_period: bool = False,
         after_treatment_name = None,
-        verbose: bool = config.VERBOSE
+        verbose: bool = False
         ):
         
         """
@@ -1389,7 +1389,7 @@ class DiffData:
         treatment_name: str,
         after_treatment_period: bool = False,
         after_treatment_name: str = None,
-        verbose: bool = config.VERBOSE
+        verbose: bool = False
         ):
 
         """
@@ -1613,7 +1613,7 @@ class DiffData:
         counterfactual_outcome_col: str,
         time_col: str,
         counterfactual_UID: str = "counterfac",
-        verbose: bool = config.VERBOSE
+        verbose: bool = False
         ):
 
         """
@@ -1815,7 +1815,7 @@ class DiffData:
         bonferroni: bool = False,
         drop_missing: bool = True,
         missing_replace_by_zero: bool = False,
-        verbose: bool = config.VERBOSE
+        verbose: bool = False
         ):
 
         """
@@ -1998,7 +1998,7 @@ def merge_data(
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     keep_columns: bool = False,
-    verbose: bool = config.VERBOSE
+    verbose: bool = False
     ):
 
     """
@@ -2190,7 +2190,7 @@ def create_data(
     after_treatment_period: bool = False,
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
-    verbose: bool = config.VERBOSE
+    verbose: bool = False
     ):
 
     """

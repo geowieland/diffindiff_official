@@ -19,7 +19,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -165,13 +165,7 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.3.1)
+## What's new (v2.3.2)
 
-- Bugfixes:
-  - didtools.is_missing(): No "Removing NA" note anymore when no missing values occur
-  - didanalyis.did_analysis(): No "xx fixed effects included" notes anymore when FE_unit and/or FE_time are already set to True by user
-  - DiffModel methods treatment_statistics() and plot_timeline() now accept continuous treatments (value of treatment variable > 0)
-  - didtools function is_parallel() now accepts continuous treatments (value of treatment variable > 0)
-  - Added parameter log_outcome_add in method DiffData.analysis()
-  - Corrected examples in docstrings
-  - Corrected typos in README
+- Extensions:
+  - Re-transform log-transformed outcomes in DiffModel.plot() via parameter 'retransform_log_outcome'

@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.1
-# Last update: 2026-03-03 17:46
+# Version:     2.3.2
+# Last update: 2026-03-06 21:26
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1165,7 +1165,7 @@ class DiffModel:
     
     def prediction_intervals(
         self,
-        confint_alpha = 0.05
+        confint_alpha: float = 0.05
         ):
 
         """
@@ -1359,11 +1359,11 @@ class DiffModel:
         self,
         treatment: str = None,
         TG_col: str = None,
-        x_label = "Time",
-        y_label = "Analysis units",
+        x_label: str = "Time",
+        y_label: str = "Analysis units",
         y_lim = None,
-        plot_title = "Treatment time",
-        plot_symbol = "o",
+        plot_title: str = "Treatment time",
+        plot_symbol: str = "o",
         treatment_group_only = True
         ):
 
@@ -1485,7 +1485,8 @@ class DiffModel:
         plot_size: list = [12, 6],
         pre_post_ticks: list = ["Pre", "Post"],
         pre_post_barplot = False,
-        pre_post_bar_width = 0.5      
+        pre_post_bar_width = 0.5,
+        retransform_log_outcome: bool = False
         ):
 
         """
@@ -1529,6 +1530,9 @@ class DiffModel:
             Plot pre-post as barplot. Default is False.
         pre_post_bar_width : float, optional
             Bar width when pre_post_barplot is True. Default is 0.5.
+        retransform_log_outcome : bool, optional
+            If outcome was log-transformed, retransform to original scale for plotting. 
+            Default is False.
 
         Returns
         -------
@@ -1612,6 +1616,23 @@ class DiffModel:
     
         model_data = pd.concat ([model_data, model_predictions], axis = 1)
         
+        if retransform_log_outcome:
+
+            if model_config["log_outcome"]:
+
+                model_data[outcome_col] = np.exp(model_data[outcome_col])
+                model_data[outcome_col_predicted] = np.exp(model_data[outcome_col_predicted])
+
+                model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[2]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[2]])
+                model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[3]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[3]])
+                model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[4]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[4]])
+                model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[5]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[5]])
+                
+                print("NOTE: Outcome variable was log-transformed, Re-transformation was applied.")
+            
+            else:
+                print("NOTE: Parameter 'retransform_log_outcome' was set to True, but outcome variable was not log-transformed. No re-transformation applied.")
+                        
         model_data_TG = model_data[model_data[TG_col] == 1]
         model_data_CG = model_data[model_data[TG_col] == 0]
     
