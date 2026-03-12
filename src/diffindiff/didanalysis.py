@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.2
-# Last update: 2026-03-06 21:26
+# Version:     2.3.3
+# Last update: 2026-03-12 19:40
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -2088,6 +2088,7 @@ def did_analysis(
     covariates: list = None,
     spillover_treatment: list = None,
     spillover_units: list = None,
+    interactions: dict = None,
     placebo: bool = False,
     confint_alpha = 0.05,
     bonferroni: bool = False,
@@ -2096,8 +2097,8 @@ def did_analysis(
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     fit_by: str = "ols_fit",
-    verbose: bool = config.VERBOSE
-    ):    
+    verbose: bool = False
+    ):
    
     """
     Perform a Difference-in-Differences analysis with a given data frame.
@@ -2154,6 +2155,9 @@ def did_analysis(
         Treatment columns used to construct spillover variables.
     spillover_units : list
         Unit identifiers affected by spillovers.
+    interactions : dict
+        Dictionary with treatment interaction variables to be
+        built from treatment variables.
     placebo : bool
         Run placebo analysis.
     confint_alpha : float
@@ -2171,7 +2175,7 @@ def did_analysis(
     fit_by : str
         Fitting method; e.g., 'ols_fit' or 'ml'.
     verbose : bool, optional
-            If True, print progress messages.
+        If True, print progress messages.
 
     Returns
     -------
@@ -2211,6 +2215,8 @@ def did_analysis(
         spillover_treatment = []
     if spillover_units is None:
         spillover_units = []
+    if interactions is None:
+        interactions = {}
 
     tools.check_columns(
         df = data,
@@ -2624,11 +2630,28 @@ def did_analysis(
         
         did_formula = f"{did_formula} + {covariates_join}"
         
-    indep_vars_no = indep_vars_no+len(spillover_vars)+len(covariates)
+    if len(interactions) > 0:
+        
+        interactions_created = helper.create_interactions(
+            data=data,
+            interactions=interactions,
+            verbose=verbose            
+        )
+
+        data = interactions_created[0]
+
+        did_formula = f"{did_formula} + {interactions_created[1]}"
+        
+        treatment_col.extend(interactions_created[2])
+        
+        no_treatments = no_treatments+len(interactions)
+        
+    indep_vars_no = indep_vars_no+len(spillover_vars)+len(covariates)+len(interactions)
         
     did_formula = did_formula[:-1] if did_formula.endswith(" ") else did_formula
     did_formula = did_formula[:-1] if did_formula.endswith("+") else did_formula
     did_formula = did_formula[:-1] if did_formula.endswith(" ") else did_formula
+    
     if not intercept:
         did_formula = f"{did_formula} - 1"
             
@@ -2754,7 +2777,7 @@ def ddd_analysis(
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     fit_by: str = "ols_fit",
-    verbose: bool = config.VERBOSE
+    verbose: bool = False
     ):
     
     """

@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.2
-# Last update: 2026-03-06 21:27
+# Version:     2.2.3
+# Last update: 2026-03-12 19:34
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -815,7 +815,6 @@ class DiffData:
     def get_did_modeldata_df (self):
 
         """
-
         Return the DiD model data as a DataFrame.
 
         Returns
@@ -845,7 +844,6 @@ class DiffData:
     def get_did_groups(self):
 
         """
-
         Return the stored DiffGroups object.
 
         Returns
@@ -875,7 +873,6 @@ class DiffData:
     def get_did_treatment(self):
 
         """
-
         Return the stored DiffTreatment object.
 
         Returns
@@ -905,7 +902,6 @@ class DiffData:
     def get_unit_time_cols(self):
 
         """
-
         Return the original unit/time column names.
 
         Returns
@@ -935,7 +931,6 @@ class DiffData:
     def get_covariates(self):
 
         """
-
         Return the list of covariate column names.
 
         Returns
@@ -965,7 +960,6 @@ class DiffData:
     def get_treatment_cols(self):
 
         """
-
         Return the stored treatment columns metadata.
 
         Returns
@@ -995,7 +989,6 @@ class DiffData:
     def get_timestamp(self):
 
         """
-
         Return timestamp metadata for the DiffData object.
 
         Returns
@@ -1567,10 +1560,10 @@ class DiffData:
         self.data[4] = unit_time_col_original
         self.data[5] = covariates
         self.data[6] = treatment_cols_new
-        self.data[7][len(self.data[7])] = helper.create_timestamp(function="define_treatment")        
+        self.data[7][len(self.data[7])] = helper.create_timestamp(function="define_treatment")
         
         return self
-
+    
     def add_segmentation(
         self,
         group_benefit: list
@@ -1796,6 +1789,8 @@ class DiffData:
 
         print("=" * total_width)
 
+        return self
+
     def analysis(
         self, 
         log_outcome: bool = False,
@@ -1811,6 +1806,7 @@ class DiffData:
         group_by: str = None,
         spillover_treatment: list = None,
         spillover_units: list = None,
+        interactions: dict = None,
         confint_alpha: float = 0.05,
         bonferroni: bool = False,
         drop_missing: bool = True,
@@ -1850,6 +1846,9 @@ class DiffData:
             Treatments for which to create spillover variables.
         spillover_units : list, optional
             Units to flag as exposed to spillover.
+        interactions : dict
+            Dictionary with treatment interaction variables to be
+            built from treatment variables.
         confint_alpha : float, optional
             Significance level for confidence intervals.
         bonferroni : bool, optional
@@ -1887,6 +1886,8 @@ class DiffData:
             spillover_treatment = []
         if spillover_units is None:
             spillover_units = []
+        if interactions is None:
+            interactions = {}
 
         did_modeldata = self.get_did_modeldata_df()
         outcome_col_original = self.data[3]
@@ -1977,6 +1978,7 @@ class DiffData:
                 covariates = covariates,
                 spillover_treatment = spillover_treatment,
                 spillover_units = spillover_units,
+                interactions = interactions,
                 confint_alpha = confint_alpha,
                 bonferroni = bonferroni,
                 freq = freq,
@@ -2166,6 +2168,7 @@ def merge_data(
         unit_time_col_original,
         [],
         treatment_cols,
+        {},
         timestamp
         )
 

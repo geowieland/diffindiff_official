@@ -4,8 +4,8 @@ purpose: Generate standardized Python docstrings in the diffindiff package
 author: Thomas Wieland  
         ORCID 0000-0001-5168-9846  
         mail geowieland@googlemail.com    
-version: 1.0.2  
-last_update: 2026-03-03 17:28  
+version: 1.0.3  
+last_update: 2026-03-12 19:29  
 ---
 
 # Agent: Python Docstring Generator
@@ -86,6 +86,8 @@ Examples
 - ANY parameter MUST have its own entry in the "Parameters" section of the docstring
 
 - NEVER add a "Notes" section.
+
+- The description of the verbose parameter is ALWAYS: "If True, print progress messages."
 
 - If there is already a docstring, read and check it for the rules mentioned here.
 - If the docstring conforms to the rules, do NOT change it. If it does not conform to the rules, change it accordingly. 

@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.1.0
-# Last update: 2025-02-28 13:06
+# Version:     1.1.1
+# Last update: 2025-03-12 20:44
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -368,6 +368,121 @@ def create_spillover(
         data,
         spillover_treatment_vars_join,
         spillover_treatment_vars
+        ]
+    
+def create_interactions(
+    data: pd.DataFrame,
+    interactions: dict = None,
+    verbose: bool = config.VERBOSE
+    ):
+
+    """
+    Create interaction variables by multiplying specified treatment columns.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Input data frame containing treatment columns.
+    interactions : dict, optional
+        Dictionary defining interaction variables. Each entry should be a
+        mapping with keys "name" (desired new column name) and
+        "treatments" (list of existing treatment column names to multiply).
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    list
+        [data_with_interactions (DataFrame), join_string (str), interaction_vars (list)]
+
+    Raises
+    ------
+    TypeError
+        If ``interactions`` is not a dict.
+    KeyError
+        If a stated interaction name already exists in `data` or if any
+        referenced treatment column does not exist in `data`.
+    ValueError
+        If fewer than two treatments are provided to build an interaction.
+
+    Examples
+    --------
+    >>> create_interactions(
+    ...     df, 
+    ...     {
+    ...         0: {
+    ...             'name': 'interaction_col', 
+    ...             'treatments': ['treatment1', 'treatment2']
+    ...         }
+    ...     }
+    ... )
+    """
+    
+    if interactions is None:
+        interactions = {}
+        
+    if not isinstance(interactions, dict):
+        raise TypeError("Parameter 'interactions' must be a dict") 
+      
+    interaction_vars = []
+    
+    if len(interactions) > 0:
+        
+        if verbose:
+            print(f"Creating {len(interactions)} interaction variables", end = " ... ")
+        
+        for key, value in interactions.items():
+            
+            interaction_var_name = value["name"]
+            
+            if interaction_var_name in data.columns:
+                raise KeyError(f"Stated column name '{interaction_var_name}' already exists in data frame")
+            
+            interaction_var_name = tools.clean_column_name(interaction_var_name)
+            
+            interaction_vars.append(interaction_var_name)            
+            
+            treatments = value["treatments"]
+            
+            if len (treatments) < 2:
+                raise ValueError(f"To build interaction variables, at least two treatment variables must be stated, not {len(treatments)}")            
+            
+            treatment_cols_not_available = []            
+            
+            for treatment in treatments:
+                if treatment not in data.columns:
+                    treatment_cols_not_available.append(treatment)
+            
+            if len(treatment_cols_not_available) > 0:                    
+                raise KeyError(f"The following column(s) stated do not exist in the data frame: {', '.join(treatment_cols_not_available)}")            
+            
+            treatment1 = treatments[0]
+            
+            data[interaction_var_name] = data[treatment1]
+            
+            for key, treatment in enumerate(treatments):
+                
+                if key == 0:
+                    continue
+                
+                data[interaction_var_name] = data[interaction_var_name]*data[treatment]
+            
+        if verbose:
+            print("OK")
+            
+            if len(interaction_vars) > 0:
+                print(f"NOTE: The following {len(interaction_vars)} interaction variables were created: {', '.join(interaction_vars)}.")
+    
+    else:
+        
+        print("WARNING: Parameter 'interactions' was not set. No interaction variables were created.")
+    
+    interaction_vars_join = ' + '.join(interaction_vars)
+    
+    return [
+        data,
+        interaction_vars_join,
+        interaction_vars
         ]
 
 def data_diagnostics(
