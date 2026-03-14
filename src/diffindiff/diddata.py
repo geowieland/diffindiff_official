@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.3
-# Last update: 2026-03-12 19:34
+# Version:     2.2.4
+# Last update: 2026-03-14 11:28
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -2168,7 +2168,6 @@ def merge_data(
         unit_time_col_original,
         [],
         treatment_cols,
-        {},
         timestamp
         )
 

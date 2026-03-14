@@ -5,7 +5,7 @@ authors:
   given-names: "Thomas"
   orcid: "https://orcid.org/0000-0001-5168-9846"
 title: "diffindiff: Python library for convenient Difference-in-Differences analyses"
-version: 2.3.3
+version: 2.3.4
 doi: 10.5281/zenodo.18656820
-date-released: 2026-03-12
+date-released: 2026-03-14
 url: "https://github.com/geowieland/diffindiff_official"

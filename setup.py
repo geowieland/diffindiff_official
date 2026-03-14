@@ -7,7 +7,7 @@ def read_README():
     
 setup(
     name='diffindiff',
-    version='2.3.3',
+    version='2.3.4',
     description='diffindiff: Python library for convenient Difference-in-Differences analyses',
     packages=find_packages(where="src"),
     package_dir={"": "src"},
