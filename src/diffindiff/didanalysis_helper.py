@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.1.1
-# Last update: 2025-03-12 20:44
+# Version:     1.1.2
+# Last update: 2025-03-16 17:46
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -531,6 +531,16 @@ def data_diagnostics(
     if cols_relevant is None:
         cols_relevant = []
 
+    modeldata_ispanel = tools.is_panel(
+        data=data,
+        unit_col=unit_col,
+        time_col=time_col,
+        verbose=verbose
+    )
+    
+    if not modeldata_ispanel[0]:
+        raise TypeError(f"A difference-in-differences analysis requires panel data with at least two observational units and time points, respectively. Input data is likely {modeldata_ispanel[1]}")
+
     modeldata_ismissing = tools.is_missing(
         data, 
         drop_missing = drop_missing,
@@ -560,7 +570,8 @@ def data_diagnostics(
     modeldata_isprepost = tools.is_prepost(
         data = data,
         unit_col = unit_col,
-        time_col = time_col
+        time_col = time_col,
+        verbose = verbose
         )
     if modeldata_isprepost:
         data_type = config.PREPOST_PANELDATA_DESCRIPTION
@@ -666,6 +677,7 @@ def treatment_diagnostics(
             unit_col = unit_col,
             time_col = time_col,
             treatment_col = treatment,
+            pre_post = pre_post,
             verbose = verbose
             )
         if is_simultaneous_result:

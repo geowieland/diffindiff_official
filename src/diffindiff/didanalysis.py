@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.3
-# Last update: 2026-03-12 19:40
+# Version:     2.3.4
+# Last update: 2026-03-16 17:39
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1290,7 +1290,7 @@ class DiffModel:
         
         TG_col_ = f"{config.TG_COL}{config.DELIMITER}{treatment}"
         TT_col_ = f"{config.TT_COL}{config.DELIMITER}{treatment}"
-        TGxTT_ = f"Placebo{config.DELIMITER}{treatment}"
+        TGxTT_ = f"Placebo{config.DELIMITER}{treatment}"        
         
         if TG_col is None and TG_col_ not in model_config["TG_col"]:
             raise ValueError(f"No treatment group identification variable for treatment {treatment}. Please state TG_col = your_treatment_group_dummy.")
@@ -2199,6 +2199,29 @@ def did_analysis(
     ...     intercept=False
     ...     )
     >>> Hesse_model1.summary()
+    >>> Hesse_model5=did_analysis(
+    ...     data=Corona_Hesse,
+    ...     unit_col="REG_NAME",
+    ...     time_col="infection_date",
+    ...     treatment_col=["Nighttime_curfew", "Mobility_restrictions", "Retail_closed", "CR_private_2"],
+    ...     covariates=["infections_cum", "R7_rm_lag10"],   
+    ...     outcome_col="R7_rm"
+    ... )
+    >>> Hesse_model5.summary()
+    >>> Hesse_model6=did_analysis(
+    ...     data=Corona_Hesse,
+    ...     unit_col="REG_NAME",
+    ...     time_col="infection_date",
+    ...     treatment_col=["Nighttime_curfew", "Mobility_restrictions"],
+    ...     covariates=["infections_cum", "R7_rm_lag10"],
+    ...     interactions={
+    ...         0: {
+    ...            "name": "curfew_and_mobility",
+    ...            "treatments": ["Nighttime_curfew", "Nighttime_curfew"]
+    ...           }        
+    ...     },
+    ...     outcome_col="R7_rm"
+    ... )
     """
 
     if TG_col is None:
@@ -2274,7 +2297,7 @@ def did_analysis(
         verbose=verbose
     )
     treatment_diagnostics = treatment_diagnostics_results[0]
-    staggered_adoption = treatment_diagnostics_results[1]
+    staggered_adoption = treatment_diagnostics_results[1]    
     
     if no_treatments > 1:        
         
@@ -2444,6 +2467,10 @@ def did_analysis(
         print("NOTE: Panel data is pre-post. Data processing and model estimation will treat data as pre-post")
         
         pre_post = True
+        
+        FE_unit = False
+        FE_time = False
+        FE_group = False
         
     if log_outcome:
         

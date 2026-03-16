@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.0.12
-# Last update: 2026-03-01 11:29
+# Version:     2.0.14
+# Last update: 2026-03-16 17:35
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ curfew_data_prepost=create_data(
 curfew_data_prepost.summary()
 # Summary of created data
 
-curfew_model_prepost=curfew_data_prepost.analysis()
+curfew_model_prepost=curfew_data_prepost.analysis(verbose=True)
 # Model analysis of created data
 
 print(curfew_model_prepost.treatment_effects())
@@ -184,7 +184,7 @@ curfew_data=create_data(
 curfew_data.summary()
 # Summary of created treatment data
 
-curfew_model=curfew_data.analysis()
+curfew_model=curfew_data.analysis(verbose=True)
 # Model analysis of created data
 
 curfew_model.summary()
@@ -210,6 +210,7 @@ curfew_placebo = curfew_model.placebo(
 
 curfew_placebo.summary()
 # Summary of placebo test
+
 
 # Two-way-fixed-effects model:
 
@@ -340,7 +341,8 @@ Hesse_model1=did_analysis(
     time_col="infection_date",
     treatment_col="Nighttime_curfew",    
     outcome_col="R7_rm",
-    intercept=False
+    intercept=False,
+    verbose=True
     )
 # Model with staggered adoption (FE automatically)
 
@@ -430,8 +432,28 @@ Hesse_model5=did_analysis(
     time_col="infection_date",
     treatment_col=["Nighttime_curfew", "Mobility_restrictions", "Retail_closed", "CR_private_2"],
     covariates=["infections_cum", "R7_rm_lag10"],   
-    outcome_col="R7_rm")
+    outcome_col="R7_rm"
+    )
 # Model with four interventions (two staggered, two without control conditions)
 
 Hesse_model5.summary()
+# Model summary
+
+Hesse_model6=did_analysis(
+    data=Corona_Hesse,
+    unit_col="REG_NAME",
+    time_col="infection_date",
+    treatment_col=["Nighttime_curfew", "School_holidays"],
+    covariates=["infections_cum", "R7_rm_lag10"],
+    interactions={
+        0: {
+           "name": "curfew_and_holidays",
+           "treatments": ["Nighttime_curfew", "School_holidays"]
+           }        
+    },
+    outcome_col="R7_rm"
+    )
+# Model with two interventions and one interaction of the two treatments
+
+Hesse_model6.summary()
 # Model summary

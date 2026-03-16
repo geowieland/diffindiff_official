@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.1
-# Last update: 2026-03-03 17:34
+# Version:     2.2.2
+# Last update: 2026-03-16 18:04
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -498,11 +498,11 @@ def is_simultaneous(
     --------
     >>> is_simultaneous(df, 'unit', 'time', 'treat')
     """
-
+    
     if pre_post:
         
         if verbose:
-            print(f"Checking whether treatment '{treatment_col}' is simultaneous or staggered", end = " ... ")
+            print(f"Data for treatment '{treatment_col}' is pre-post data and considered as simultaneous.")
         
         simultaneous = True
     
@@ -521,25 +521,24 @@ def is_simultaneous(
         treatment_group = data_isnotreatment[1]
         data_TG = data[data[unit_col].isin(treatment_group)]
 
-        data_TG_pivot = data_TG.pivot_table(
-            index = time_col,
-            columns = unit_col, 
-            values = treatment_col
-            )
+        treated = data_TG[treatment_col] > 0
 
-        if config.ACCEPT_CONTINUOUS_TREATMENTS:
-            simultaneous = (data_TG_pivot.nunique(axis=1) > 0).all()
-        else:
-            simultaneous = (data_TG_pivot.nunique(axis=1) == 1).all()
+        simultaneous = (
+            data_TG.assign(treated=treated)
+            .groupby(time_col)["treated"]
+            .nunique()
+            .le(1)
+            .all()
+        )
 
-    if verbose:
-        print("OK")
+        if verbose:
+            print("OK")
 
         if not simultaneous and data_isnotreatment[0]:
             print(f"NOTE: treatment '{treatment_col}' is not simultaneous.")
 
-    if simultaneous and not data_isnotreatment[0]:
-        print(f"WARNING: treatment '{treatment_col}' is simultaneous and does not include a {config.NO_TREATMENT_CG_DESCRIPTION}")
+        if simultaneous and not data_isnotreatment[0]:
+            print(f"WARNING: treatment '{treatment_col}' is simultaneous and does not include a {config.NO_TREATMENT_CG_DESCRIPTION}")
 
     return simultaneous
 
@@ -905,6 +904,65 @@ def is_parallel(
         test_ols_model
         ]
 
+def is_panel(
+    data: pd.DataFrame,
+    unit_col: str,
+    time_col: str,
+    verbose: bool = config.VERBOSE
+    ):
+
+    """
+    Check whether panel data is panel data 
+    (>=2 units and >= 2 timepoints).
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data.
+    unit_col : str
+        Column name for units.
+    time_col : str
+        Column name for time.
+    verbose : bool, optional
+        If True, print progress messages.
+
+    Returns
+    -------
+    bool
+        True if panel data, False otherwise.
+
+    Examples
+    --------
+    >>> is_panel(df, 'unit', 'time')
+    """
+    
+    if verbose:
+        print("Checking whether input data is panel data", end = " ... ")
+    
+    panel = True
+    other_data_type = ""
+    
+    no_units = data[unit_col].nunique()
+    no_timepoints = data[time_col].nunique()
+    
+    if no_units < 2 or no_timepoints < 2:
+        panel = False
+        
+    if verbose:
+        print("OK")
+        
+    if no_units < 2 and no_timepoints >= 2:
+        other_data_type = "Single time series data"
+    elif no_units > 2 and no_timepoints < 2:
+        other_data_type = "Cross-sectional data"
+    elif no_units < 2 and no_timepoints < 2:
+        other_data_type = "Single observation"
+        
+    if not panel:
+        print(f"WARNING: Input data contains {no_units} units and {no_timepoints} time points. It is not panel data but likely: {other_data_type}.")
+        
+    return panel, other_data_type
+
 def is_prepost(
     data: pd.DataFrame,
     unit_col: str,
@@ -937,9 +995,12 @@ def is_prepost(
     """
 
     if verbose:
-        print("Checking whether panel data is pre-post or multi-period", end = " ... ")
+        print("Checking whether panel data is pre-post or multi-period", end = " ... ")    
     
-    prepost = (data.groupby(unit_col)[time_col].nunique().le(2).all())
+    prepost = False
+    
+    if data[time_col].nunique() == 2:
+        prepost = True        
     
     if verbose:
         print("OK")
