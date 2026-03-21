@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.4
-# Last update: 2026-03-16 17:39
+# Version:     2.3.5
+# Last update: 2026-03-21 11:56
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1292,11 +1292,13 @@ class DiffModel:
         TT_col_ = f"{config.TT_COL}{config.DELIMITER}{treatment}"
         TGxTT_ = f"Placebo{config.DELIMITER}{treatment}"        
         
+        treatment_col_errors = []
         if TG_col is None and TG_col_ not in model_config["TG_col"]:
-            raise ValueError(f"No treatment group identification variable for treatment {treatment}. Please state TG_col = your_treatment_group_dummy.")
-        
+            treatment_col_errors.append(f"No treatment group identification variable for treatment '{treatment}'. State parameter 'TG_col' = <<your_treatment_group_dummy>> (e.g., 'TG_{treatment}').")        
         if TT_col is None and TT_col_ not in model_config["TT_col"]:
-            raise ValueError(f"No treatment time variable for treatment {treatment}. Please state TG_col = your_treatment_time_dummy.")
+            treatment_col_errors.append(f"No treatment time variable for treatment '{treatment}'. State parameter 'TT_col' = <<your_treatment_time_dummy>> (e.g., 'TT_{treatment}.)")
+        if len(treatment_col_errors) > 0:
+            raise ValueError(f"Missing arguments in placebo analysis: {' '.join(treatment_col_errors)}")        
         
         if TG_col is not None:
             TG_col_ = TG_col
@@ -1327,6 +1329,8 @@ class DiffModel:
 
         model_data_c[TG_col_] = 0
         model_data_c.loc[(model_data_c[unit_col].isin(units_random_sample)), TG_col_] = 1
+        model_data_c[TT_col_] = 0
+        model_data_c.loc[((model_data_c[time_col] >= treatment_period_start) & (model_data_c[time_col] <= treatment_period_end)), TT_col_] = 1
         model_data_c[TGxTT_] = model_data_c[TG_col_] * model_data_c[TT_col_]
 
         model_data_c_analysis = did_analysis(
