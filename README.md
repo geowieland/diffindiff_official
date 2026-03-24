@@ -19,7 +19,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.6) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.7) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -165,9 +165,15 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.3.6)
+## What's new (v2.3.7)
 
-- Bugfixes:  
-  - Bug in DiffModel.placebo() with respect to missing treatment period and time columns fixed
-  - Collecting treatment column errors in DiffModel.placebo()
-  - Corrections in error messages
+- Extensions:  
+  - DiffModel.counterfactual() and DiffModel.plot_counterfactual(): Re-transform log-transformed outcome via parameter retransform_log_outcome
+  - Difference between predicted and counterfactual-predicted in result df of DiffModel.counterfactual()  
+  - Extended parameters in didtools.model_wrapper() to be passed to sklearn.model_selection.train_test_split()
+  - Extension of documentations
+- Bugfixes:
+  - diddata.create_counterfactual(): Fixed calculation error, additional check of input parameters
+  - didtools.is_prepost() now also checks number of observational units
+  - didtools.is_notreatment() now checks whether data is singular with respect to 0 and 1  
+  - didtools.fit_metrics() tries to convert observed and expected if not numeric before raising TypeError

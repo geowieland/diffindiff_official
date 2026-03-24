@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.4
-# Last update: 2026-03-14 11:28
+# Version:     2.2.5
+# Last update: 2026-03-24 20:23
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -2295,6 +2295,7 @@ def create_counterfactual(
     treatment_col: str,
     time_col: str,
     cf_for_unit: str,
+    use_treatment_col: bool = False,
     use_data: str = "both",
     model_type: str = "ols",
     test_size: float = 0.2,
@@ -2310,7 +2311,8 @@ def create_counterfactual(
     svr_kernel = "rbf",
     xgb_learning_rate = 0.1,
     lgbm_learning_rate = 0.1,
-    random_state = 71
+    random_state = 71,
+    verbose: bool = False
     ):
     
     """
@@ -2332,12 +2334,76 @@ def create_counterfactual(
         Time column name.
     cf_for_unit : str
         Unit id for which a counterfactual should be generated (excluded from training).
+    use_treatment_col : bool, optional
+        If True, treatment variable is included into counterfactual prediction.
     use_data : {'both','treatment','control'}, optional
         Subset used for training the predictive model (default 'both').
     model_type : str, optional
         Model type passed to ``tools.model_wrapper`` (e.g. 'ols','rf','xgb').
-    Other parameters
-        Passed to the model wrapper (hyperparameters, test/train split, random_state).
+    test_size : float or int, optional
+        Fraction or number of data to reserve for testing.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation.
+    train_size : float or int, optional
+        Fraction or number of data to define for training.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation.
+    shuffle : bool, optional
+        Whether or not to shuffle the data before splitting.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation. 
+    stratify : array-like, default=None
+        If not None, data is split in a stratified fashion, 
+        using this as the class labels.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation.
+    model_n_estimators : int, optional
+        The number of estimators in the ensemble.
+        Passed to `BaggingRegressor` and `RandomForestRegressor`;
+        see the corresponding documentation. 
+    model_max_features : int or float, optional
+        Passed to `BaggingRegressor`, `RandomForestRegressor`,
+        and `GradientBoostingRegressor`; see the corresponding documentation.
+    model_min_samples_split : int or float, optional
+        Minimum number of samples required to split an internal node.
+        Passed to `RandomForestRegressor`; 
+        see the corresponding documentation.
+    rf_max_depth : int, optional
+        Maximum depth of trees in Random Forest Regression.
+        Passed to `RandomForestRegressor`; see the corresponding documentation.
+    gb_iterations : int, optional
+        Passed to `GradientBoostingRegressor`, `XGBRegressor`, 
+        and `LGBMRegressor`; see the corresponding documentation.
+    gb_max_depth : int, optional
+        Maximum depth trees in Gradient Boosting Regression.
+        Passed to `GradientBoostingRegressor`; 
+        see the corresponding documentation.
+    gb_learning_rate : float, optional
+        Weighting with respect to the contribution of each tree
+        in the Gradient Boosting algorithm.
+        Passed to `GradientBoostingRegressor`; 
+        see the corresponding documentation.
+    knn_n_neighbors : int, optional
+        Number of neighbors to use in Nearest-neighbor algorithm.
+        Passed to `KNeighborsRegressor`; 
+        see the corresponding documentation.
+    svr_kernel : str or callable, optional
+        Kernel type to be used in the Support Vector Regression algorithm.
+        Passed to `SVR`; see the corresponding documentation.
+    xgb_learning_rate : float, optional
+        Weighting with respect to the contribution of each tree
+        in the Extreme Gradient Boosting algorithm.
+        Passed to `XGBRegressor`; see the corresponding documentation.
+    lgbm_learning_rate : float, optional
+        Weighting with respect to the contribution of each tree
+        in the Light Gradient Boosting algorithm.
+        Passed to `LGBMRegressor`; see the corresponding documentation.
+    random_state : int, optional
+        Random seed for reproducibility.
+        Passed to `sklearn.model_selection.train_test_split`
+        and regressors; see the corresponding documentations.
+    verbose : bool, optional
+        If True, print progress messages.
 
     Returns
     -------
@@ -2356,21 +2422,60 @@ def create_counterfactual(
     ...     cf_for_unit='counterfac'
     ...     )
     """
+    
+    if not isinstance(y, str):
+        if isinstance(y, list):
+            if len(y) == 1:
+                y = y[0]
+            elif len(y) == 0:
+                raise ValueError("Parameter y was stated as empty list")
+            else:
+                raise ValueError(f"Parameter y was stated as list with {len(y)} entries")
+        else:
+            raise TypeError(f"Parameter y must be stated as str, not: {y}")
+        
+    if not isinstance(X, list):
+        if isintance(X, str):
+            X = [X]
+        else:
+            raise TypeError(f"Parameter X must be stated as list of strings, not: {X}")
+    
+    cols = [
+        unit_col, 
+        time_col,
+        y
+        ]
+    cols.extend(X)
+    
+    if use_treatment_col:
+        cols.append(treatment_col)
             
-    data = data[[y] + X + [unit_col, treatment_col, time_col]].copy()
-
+    data = data[cols].copy()
+    
     data_len = len(data)
     data = data.dropna()
     if len(data) < data_len:
         print(f"NOTE: Because of NaN values, {data_len-len(data)} observations were skipped.")
 
-    data = data[data[unit_col].astype(str) != cf_for_unit]
-    data_unit = data[data[unit_col].astype(str) == cf_for_unit]
+    isnotreatment = tools.is_notreatment(
+        data = data,
+        unit_col = unit_col,
+        treatment_col = treatment_col,
+        verbose = verbose
+        )
+    if not isnotreatment[0]:
+        print(f"NOTE: No {config.NO_TREATMENT_CG_DESCRIPTION}. Counterfactual will not cover full treatment time.")    
+    
+    data_unit = data.loc[data[unit_col].astype(str) == cf_for_unit]
+    assert len(data_unit) > 0, f"Observational unit '{cf_for_unit}' does not exist in model data"
+    
+    data = data.loc[data[unit_col].astype(str) != cf_for_unit]    
     
     isnotreatment = tools.is_notreatment(
         data = data,
         unit_col = unit_col,
-        treatment_col = treatment_col
+        treatment_col = treatment_col,
+        verbose = verbose
         )
     control_group = isnotreatment[2]
     
@@ -2378,12 +2483,16 @@ def create_counterfactual(
         data = data,
         unit_col = unit_col,
         time_col = time_col,
-        treatment_col = treatment_col
+        treatment_col = treatment_col,
+        verbose = verbose
         )[0]
     units = tools.unique(units_tt[unit_col])  
     
     if not isnotreatment[0]:
-        print(f"NOTE: No {config.NO_TREATMENT_CG_DESCRIPTION}. Counterfactual will not cover full treatment time.")    
+        print(f"NOTE: No {config.TREATMENT_GROUP_DESCRIPTION} units in model data left.")
+    
+    if verbose:
+        print(f"Creating data for counterfactual with {len(X)} independent variables", end = " ... ")
     
     data_TG = pd.DataFrame(columns = data.columns)
 
@@ -2411,6 +2520,9 @@ def create_counterfactual(
     
     data_cf[X] = data_cf[X].apply(pd.to_numeric, errors='coerce')
     
+    if verbose:
+        print("OK")
+    
     counterfactual_pred = tools.model_wrapper(
         y = data_cf[y],
         X = data_cf[X],
@@ -2428,8 +2540,18 @@ def create_counterfactual(
         svr_kernel = svr_kernel,
         xgb_learning_rate = xgb_learning_rate,
         lgbm_learning_rate = lgbm_learning_rate,
-        random_state = random_state
+        random_state = random_state,
+        verbose = verbose
         )
+    
+    if verbose:
+        print(f"Counterfactual prediction for observational unit '{cf_for_unit}'", end = " ... ")
+    
+    data_unit[treatment_col] = 0
+    data_unit[y] = counterfactual_pred[1].predict(data_unit[X])
+    
+    if verbose:
+        print("OK")
     
     return [
         counterfactual_pred, 

@@ -4,15 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.14
-# Last update: 2026-03-21 11:52
+# Version:     1.0.15
+# Last update: 2026-03-24 18:04
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 # Basic config:
 
 PACKAGE_NAME = "diffindiff"
-PACKAGE_VERSION = "2.3.6"
+PACKAGE_VERSION = "2.3.7"
 
 VERBOSE = False
 
@@ -29,11 +29,12 @@ DID_DESCRIPTION = "Difference-in-Differences Analysis"
 DDD_DESCRIPTION = "Triple-Difference Analysis"
 
 TREATMENT_DESCRIPTION = "Treatment"
+CONTROL_DESCRIPTION = "Control"
 
 GROUP_DESCRIPTION = "Group"
 
 TREATMENT_GROUP_DESCRIPTION = f"{TREATMENT_DESCRIPTION} {GROUP_DESCRIPTION}"
-CONTROL_GROUP_DESCRIPTION = f"Control {GROUP_DESCRIPTION}"
+CONTROL_GROUP_DESCRIPTION = f"{CONTROL_DESCRIPTION} {GROUP_DESCRIPTION}"
 GROUPS_DESCRIPTION = f"{TREATMENT_DESCRIPTION} and {CONTROL_GROUP_DESCRIPTION}"
 
 TIME_PERIODS_DESCRIPTION = "Time periods"
@@ -96,6 +97,7 @@ PI_LOWER_SUFFIX = "PI_lower"
 PI_UPPER_SUFFIX = "PI_upper"
 SPILLOVER_PREFIX = "Spillover"
 SPILLOVER_UNIT_PREFIX = f"{SPILLOVER_PREFIX}{DELIMITER}{UNIT_COL}"
+DIFFERENCE_SUFFIX = "diff"
 
 # Modeling config:
 
@@ -361,6 +363,21 @@ MODEL_FIT_METRICS = {
         "show_in_summary": False
         }
 }
+
+# Machine learning models:
+MODEL_WRAPPER_AVAILABLE = {
+    "ols": "Ordinary Least Squares",
+    "olsbg": "Ordinary Least Squares with Bagging",
+    "dtbg": "Decision Trees with Bagging",
+    "rf": "Random Forest",
+    "gb": "Gradient Boosted Trees",
+    "knn": "K-nearest neighbor",
+    "xgb": "Extreme Gradient Boosting",
+    "lgbm": "LightGBM",
+    "svr": "Support-vector regression",
+}
+MODEL_WRAPPER_AVAILABLE_LIST = list(MODEL_WRAPPER_AVAILABLE.keys())
+
 
 # Treatment diagnostics:
 

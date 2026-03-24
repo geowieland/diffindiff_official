@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.2
-# Last update: 2026-03-16 18:04
+# Version:     2.2.3
+# Last update: 2026-03-24 20:21
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -582,7 +582,7 @@ def is_notreatment(
     treatment_timepoints = treatment_timepoints.reset_index()
 
     no_treatment = (treatment_timepoints[treatment_col] == 0).any()
-    if (treatment_timepoints[treatment_col] == 0).all():
+    if (treatment_timepoints[treatment_col] == 0).all() or (treatment_timepoints[treatment_col] == 1).all():
         no_treatment = False
 
     treatment_group = treatment_timepoints.loc[treatment_timepoints[treatment_col] > 0, unit_col]
@@ -999,7 +999,7 @@ def is_prepost(
     
     prepost = False
     
-    if data[time_col].nunique() == 2:
+    if data[time_col].nunique() == 2 and data[unit_col].nunique() > 1:
         prepost = True        
     
     if verbose:
@@ -1305,8 +1305,14 @@ def model_wrapper(
     y,
     X,
     model_type: str,
-    test_size = 0.2,
-    train_size = None,
+    test_size: float = 0.2,
+    train_size: float = None,
+    shuffle: bool = True,
+    stratify = None,
+    X_train: list = None, 
+    X_test: list = None, 
+    y_train: list = None, 
+    y_test: list = None,
     model_n_estimators = 1000,
     model_max_features = 0.9,
     model_min_samples_split = 2,
@@ -1333,12 +1339,68 @@ def model_wrapper(
         Independent variables (features).
     model_type : str
         One of: 'ols', 'olsbg', 'dtbg', 'rf', 'gb', 'knn', 'svr', 'xgb', 'lgbm'.
-    test_size : float, optional
-        Fraction of data to reserve for testing.
+    test_size : float or int, optional
+        Fraction or number of data to reserve for testing.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation.
+    train_size : float or int, optional
+        Fraction or number of data to define for training.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation.
+    shuffle : bool, optional
+        Whether or not to shuffle the data before splitting.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation. 
+    stratify : array-like, default=None
+        If not None, data is split in a stratified fashion, 
+        using this as the class labels.
+        Passed to `sklearn.model_selection.train_test_split`;
+        see the corresponding documentation.
+    model_n_estimators : int, optional
+        The number of estimators in the ensemble.
+        Passed to `BaggingRegressor` and `RandomForestRegressor`;
+        see the corresponding documentation. 
+    model_max_features : int or float, optional
+        Passed to `BaggingRegressor`, `RandomForestRegressor`,
+        and `GradientBoostingRegressor`; see the corresponding documentation.
+    model_min_samples_split : int or float, optional
+        Minimum number of samples required to split an internal node.
+        Passed to `RandomForestRegressor`; 
+        see the corresponding documentation.
+    rf_max_depth : int, optional
+        Maximum depth of trees in Random Forest Regression.
+        Passed to `RandomForestRegressor`; see the corresponding documentation.
+    gb_iterations : int, optional
+        Passed to `GradientBoostingRegressor`, `XGBRegressor`, 
+        and `LGBMRegressor`; see the corresponding documentation.
+    gb_max_depth : int, optional
+        Maximum depth trees in Gradient Boosting Regression.
+        Passed to `GradientBoostingRegressor`; 
+        see the corresponding documentation.
+    gb_learning_rate : float, optional
+        Weighting with respect to the contribution of each tree
+        in the Gradient Boosting algorithm.
+        Passed to `GradientBoostingRegressor`; 
+        see the corresponding documentation.
+    knn_n_neighbors : int, optional
+        Number of neighbors to use in Nearest-neighbor algorithm.
+        Passed to `KNeighborsRegressor`; 
+        see the corresponding documentation.
+    svr_kernel : str or callable, optional
+        Kernel type to be used in the Support Vector Regression algorithm.
+        Passed to `SVR`; see the corresponding documentation.
+    xgb_learning_rate : float, optional
+        Weighting with respect to the contribution of each tree
+        in the Extreme Gradient Boosting algorithm.
+        Passed to `XGBRegressor`; see the corresponding documentation.
+    lgbm_learning_rate : float, optional
+        Weighting with respect to the contribution of each tree
+        in the Light Gradient Boosting algorithm.
+        Passed to `LGBMRegressor`; see the corresponding documentation.
     random_state : int, optional
         Random seed for reproducibility.
-    Other parameters
-        Model-specific hyperparameters.
+        Passed to `sklearn.model_selection.train_test_split`
+        and regressors; see the corresponding documentations.
     verbose : bool, optional
         If True, print progress messages.
 
@@ -1357,22 +1419,52 @@ def model_wrapper(
     >>> model_wrapper(y, X, model_type='ols')
     """
 
-    if model_type not in ["ols", "olsbg", "dtbg", "rf", "gb", "knn", "svr", "xgb", "lgbm"]:
-        raise ValueError("Please enter a valid model type ('ols', 'olsbg', 'dtbg', 'rf', 'gb', 'knn', 'svr', 'xgb', 'lgbm')")
+    if model_type not in config.MODEL_WRAPPER_AVAILABLE_LIST:
+        raise ValueError(f"Please enter a valid model type: {', '.join(config.MODEL_WRAPPER_AVAILABLE_LIST)}.")
     
     if verbose:
         print("Setting up training and testing data", end = " ... ")
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, 
-        y, 
-        test_size = test_size,
-        train_size = train_size,
-        random_state = random_state
-    )
+    if X_train is None:
+        X_train = []
+    if X_test is None:
+        X_test = []
+    if y_train is None:
+        y_train = [] 
+    if y_test is None:
+        y_test = []
+        
+    self_defined_split = False
+        
+    if len(X_train) > 0 and len(X_test) > 0 and len(y_train) > 0 and len(y_test) > 0:
+        
+        if len(X_train) != len(y_train) or len(X_test) != len(y_test):
+            raise ValueError(f"Train resp. tests subsets y and X must have the same length.")
+        
+        else:
+            self_defined_split = True
+        
+    else:
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, 
+            y, 
+            test_size = test_size,
+            train_size = train_size,
+            shuffle = shuffle,
+            stratify = stratify,
+            random_state = random_state
+        )
 
     if verbose:
+        
         print("OK")
+        
+        if self_defined_split:
+            print(f"NOTE: Train and test subsets are built by user-defined splitting with {len(X_train)} training and {len(X_test)} test observations.")
+        else:
+            print(f"NOTE: Random train and test subsets were built with test_size = {test_size} and train_size = {train_size}.")
+            
         print(f"Training {model_type} model", end = " ... ")
     
     model = None
@@ -1441,8 +1533,11 @@ def model_wrapper(
     
     params = {
         "model_type": model_type,
+        "model_type_description": config.MODEL_WRAPPER_AVAILABLE[model_type],
+        "self_defined_split": self_defined_split,
         "test_size": test_size,
         "train_size": train_size,
+        "random_state": random_state,
         "model_n_estimators": model_n_estimators,
         "model_max_features": model_max_features,
         "model_min_samples_split": model_min_samples_split,
@@ -1453,8 +1548,7 @@ def model_wrapper(
         "knn_n_neighbors": knn_n_neighbors,
         "svr_kernel": svr_kernel,
         "xgb_learning_rate": xgb_learning_rate,
-        "lgbm_learning_rate": lgbm_learning_rate,
-        "random_state": random_state
+        "lgbm_learning_rate": lgbm_learning_rate        
         }
     
     return [
@@ -1501,7 +1595,7 @@ def fit_metrics(
     AssertionError
         If observed and expected differ in length.
     ValueError
-        If observed or expected are not numeric, or contain NaNs when remove_nan is False.
+        If observed and/or expected are not numeric, or contain NaNs when remove_nan is False.
 
     Examples
     --------
@@ -1513,10 +1607,19 @@ def fit_metrics(
 
     assert observed_no == expected_no, "Error while calculating fit metrics: Observed and expected differ in length"
     
+    type_errors = []
     if not pd.api.types.is_numeric_dtype(observed) or not np.issubdtype(observed.dtype, np.number):
-        raise ValueError("Error while calculating fit metrics: Observed column is not numeric")
+        try:
+            observed = pd.to_numeric(observed)
+        except:
+            type_errors.append("Observed column is not numeric.")
     if not pd.api.types.is_numeric_dtype(expected) or not np.issubdtype(expected.dtype, np.number):
-        raise ValueError("Error while calculating fit metrics: Expected column is not numeric")
+        try:
+            expected = pd.to_numeric(expected)
+        except:
+            type_errors.append("Expected column is not numeric.")
+    if len(type_errors) > 0:
+        raise TypeError(f"Error(s) while calculating fit metrics: {', '.join(type_errors)}")
     
     if outcome_col is not None:
         outcome_observed_col = f"{outcome_col}{config.DELIMITER}{config.OBSERVED_SUFFIX}"
@@ -1549,10 +1652,13 @@ def fit_metrics(
     
     else:
         
+        value_errors = []        
         if np.isnan(observed).any():
-            raise ValueError("Error while calculating fit metrics: Vector with observed data contains NaNs and 'remove_nan' is False")
+            value_errors.append("Observed data contains NaNs.")
         if np.isnan(expected).any():
-            raise ValueError("Error while calculating fit metrics: Vector with expected data contains NaNs and 'remove_nan' is False")
+            value_errors.append("Expected data contains NaNs.")
+        if len(value_errors) > 0:
+            raise ValueError(f"Error(s) while calculating fit metrics: {' '.join(value_errors)} Parameter 'remove_nan' is False.")
     
     if verbose:
         print("Calculating model fit metrics", end = " ... ")

@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.5
-# Last update: 2026-03-21 11:56
+# Version:     2.3.7
+# Last update: 2026-03-24 18:37
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -812,13 +812,13 @@ class DiffModel:
         self,
         colors = ["blue", "grey"],
         colors_by_signficance = ["red", "coral", "dimgray", "silver", "green", "palegreen"],
-        point_type = "s",
-        point_size = 8,
-        line_width = 6,
-        line_cap_size = 5, 
-        x_label = "Estimates with confidence intervals",
-        y_label = "Coefficient",
-        plot_title = "DiD effects",
+        point_type: str = "s",
+        point_size: int = 8,
+        line_width: int = 6,
+        line_cap_size: int = 5, 
+        x_label: str = "Estimates with confidence intervals",
+        y_label: str = "Coefficient",
+        plot_title: str = "DiD effects",
         plot_grid: bool = True,
         sort_by_coef: bool = False,
         sort_ascending: bool = True,
@@ -1042,11 +1042,13 @@ class DiffModel:
     def counterfactual(
         self,
         treatment = None,
-        after_treatment_col: str = None
+        after_treatment_col: str = None,
+        retransform_log_outcome: bool = False
         ):
         
         """
-        Compute counterfactual predictions for the treatment group by setting treatment to zero.
+        Compute counterfactual predictions for the treatment group by 
+        setting treatment to zero.
 
         Parameters
         ----------
@@ -1054,11 +1056,14 @@ class DiffModel:
             Treatment name to analyse. If None, the first treatment is chosen.
         after_treatment_col : str, optional
             After-treatment indicator column name.
+        retransform_log_outcome : bool, optional
+            If outcome was log-transformed, retransform to original scale for plotting. 
+            Default is False.
 
         Returns
         -------
         list
-            [modified_model_data (DataFrame), outcome_pred_col (str), outcome_pred_cf_col (str)]
+            [modified_model_data (DataFrame), outcome_pred_col (str), outcome_pred_cf_col (str), outcome_diff_col (str)]
 
         Raises
         ------
@@ -1106,7 +1111,7 @@ class DiffModel:
         didmodel = self.didmodel()
 
         predictions = self.predictions()
-        
+
         model_data = self.data[2]
         
         model_config = self.data[1]
@@ -1118,20 +1123,58 @@ class DiffModel:
 
         predictions_counterfac = didmodel.get_prediction(model_data_mod).summary_frame()
 
-        outcome_pred_col = f"{outcome_col}{config.PREDICTED_SUFFIX}"
+        outcome_pred_col = f"{outcome_col}{config.DELIMITER}{config.PREDICTED_SUFFIX}"
         if outcome_pred_col in model_data_mod.columns:
             outcome_pred_col = f"{config.DELIMITER}{outcome_pred_col}"
-        outcome_pred_cf_col = f"{outcome_col}{config.COUNTERFAC_SUFFIX_PRED_CF}"
+            
+        outcome_pred_cf_col = f"{outcome_col}{config.DELIMITER}{config.COUNTERFAC_SUFFIX_PRED_CF}"
         if outcome_pred_cf_col in model_data_mod.columns:
-            outcome_pred_cf_col = f"{config.DELIMITER}{outcome_pred_cf_col}"
+            outcome_pred_cf_col = f"{config.DELIMITER}{outcome_pred_cf_col}"        
 
         model_data_mod[outcome_pred_col] = predictions[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[0]]
         model_data_mod[outcome_pred_cf_col] = predictions_counterfac[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[0]]
+        
+        if retransform_log_outcome:
+            
+            if model_config["log_outcome"]:
+                
+                if outcome_col.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):
+                    outcome_col = outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+
+                if outcome_pred_col.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):
+                    
+                    model_data_mod = model_data_mod.rename(
+                        columns = {
+                            outcome_pred_col: outcome_pred_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+                        }
+                    )
+                    
+                    outcome_pred_col = outcome_pred_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+
+                if outcome_pred_cf_col.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):                    
+                    
+                    model_data_mod = model_data_mod.rename(
+                        columns = {
+                            outcome_pred_cf_col: outcome_pred_cf_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+                        }
+                    )
+                                        
+                    outcome_pred_cf_col = outcome_pred_cf_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]   
+
+                model_data_mod[outcome_pred_col] = np.exp(model_data_mod[outcome_pred_col])
+                model_data_mod[outcome_pred_cf_col] = np.exp(model_data_mod[outcome_pred_cf_col])                
+        
+        outcome_diff_col = f"{outcome_col}{config.DELIMITER}{config.DIFFERENCE_SUFFIX}"
+        if outcome_diff_col in model_data_mod.columns:
+            outcome_diff_col = f"{config.DELIMITER}{outcome_diff_col}"
+            
+        model_data_mod[outcome_diff_col] = model_data_mod[outcome_pred_col]-model_data_mod[outcome_pred_cf_col]
 
         return [
             model_data_mod,
             outcome_pred_col,
-            outcome_pred_cf_col
+            outcome_pred_cf_col,
+            outcome_diff_col
         ]
 
     def didmodel(self):
@@ -1368,7 +1411,7 @@ class DiffModel:
         y_lim = None,
         plot_title: str = "Treatment time",
         plot_symbol: str = "o",
-        treatment_group_only = True
+        treatment_group_only: bool = True
         ):
 
         """
@@ -1472,7 +1515,7 @@ class DiffModel:
 
     def plot(
         self,
-        treatment = None,
+        treatment: str = None,
         x_label: str = "Time",
         y_label: str = "Outcome",
         y_lim = None,
@@ -1567,7 +1610,7 @@ class DiffModel:
         treatment_diagnostics = model_config["treatment_diagnostics"]
         no_treatments = model_config["no_treatments"]
         outcome_col = model_config["outcome_col"]
-        outcome_col_predicted = f"{outcome_col}{config.PREDICTED_SUFFIX}"
+        outcome_col_predicted = f"{outcome_col}{config.DELIMITER}{config.PREDICTED_SUFFIX}"
 
         if TG_col is None and treatment is None:            
             if no_treatments == 1:
@@ -1624,6 +1667,26 @@ class DiffModel:
 
             if model_config["log_outcome"]:
 
+                if outcome_col.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):                    
+                    
+                    model_data = model_data.rename(
+                        columns = {
+                            outcome_col: outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+                        }
+                    )
+                    
+                    outcome_col = outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+                
+                if outcome_col_predicted.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):                    
+                    
+                    model_data = model_data.rename(
+                        columns = {
+                            outcome_col_predicted: outcome_col_predicted[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+                        }
+                    )
+                                        
+                    outcome_col_predicted = outcome_col_predicted[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]                    
+                
                 model_data[outcome_col] = np.exp(model_data[outcome_col])
                 model_data[outcome_col_predicted] = np.exp(model_data[outcome_col_predicted])
 
@@ -1901,7 +1964,8 @@ class DiffModel:
         lines_labels: list = ["TG", "TG counterfactual"],
         plot_legend: bool = True,
         plot_grid: bool = True,
-        plot_size: list = [12, 6]
+        plot_size: list = [12, 6],
+        retransform_log_outcome: bool = False
         ):
 
         """
@@ -1933,6 +1997,9 @@ class DiffModel:
             Show grid. Default is True.
         plot_size : list, optional
             Figure size as [width, height]. Default is [12, 6].
+        retransform_log_outcome : bool, optional
+            If outcome was log-transformed, retransform to original scale for plotting. 
+            Default is False.
 
         Returns
         -------
@@ -1969,11 +2036,12 @@ class DiffModel:
             if no_treatments == 1:
                 raise ValueError ("Model object has no column for treatment group with respect to one treatment. Set parameter treatment = [your_treatment].")
             else:
-                raise ValueError ("Model object has no column for treatment group with respect to ", str(no_treatments), " treatments. Choose one with parameter treatment.")
+                raise ValueError (f"Model object has no column for treatment group with respect to {no_treatments} treatments. Choose one with parameter treatment.")
 
         counterfac_results = self.counterfactual(
             treatment = treatment,
-            after_treatment_col = after_treatment_col
+            after_treatment_col = after_treatment_col,
+            retransform_log_outcome = retransform_log_outcome
             )
 
         model_data_mod = counterfac_results[0]
