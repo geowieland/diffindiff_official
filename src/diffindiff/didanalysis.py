@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.7
-# Last update: 2026-03-24 18:37
+# Version:     2.3.8
+# Last update: 2026-04-21 20:31
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1661,19 +1661,16 @@ class DiffModel:
         model_predictions = model_predictions.reset_index()
         model_predictions.rename(columns = {config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[0]: outcome_col_predicted}, inplace = True)
     
-        model_data = pd.concat ([model_data, model_predictions], axis = 1)
+        model_data = pd.concat([model_data, model_predictions], axis = 1)
         
+        if model_config["log_outcome"] and not retransform_log_outcome and y_lim is not None:
+            print(f"NOTE: Outcome variable was log-transformed. Plotting is on log scale, but 'y_lim' is specified. The plot presentation might be nonsensical. Set param 'retransform_log_outcome' to True to re-transform to original scale for plotting.")
+
         if retransform_log_outcome:
 
             if model_config["log_outcome"]:
 
                 if outcome_col.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):                    
-                    
-                    model_data = model_data.rename(
-                        columns = {
-                            outcome_col: outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
-                        }
-                    )
                     
                     outcome_col = outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
                 
@@ -1686,8 +1683,7 @@ class DiffModel:
                     )
                                         
                     outcome_col_predicted = outcome_col_predicted[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]                    
-                
-                model_data[outcome_col] = np.exp(model_data[outcome_col])
+
                 model_data[outcome_col_predicted] = np.exp(model_data[outcome_col_predicted])
 
                 model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[2]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[2]])

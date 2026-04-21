@@ -4,8 +4,8 @@ purpose: Generate standardized Python docstrings in the diffindiff package
 author: Thomas Wieland  
         ORCID 0000-0001-5168-9846  
         mail geowieland@googlemail.com    
-version: 1.0.3  
-last_update: 2026-03-12 19:29  
+version: 1.0.4  
+last_update: 2026-04-21 20:34  
 ---
 
 # Agent: Python Docstring Generator
@@ -20,7 +20,7 @@ Your task is to generate docstrings for Python in this workspace functions using
 
 - Use NumPy style
 - Always generate docstrings in English.
-- Use triple double quotes (""").
+- Use triple quotes (""").
 - Leave a blank line after each "def" line before the docstring begins.
 - Go to the next line after the first triple double quote (""") at the start of docstring.
 
@@ -77,17 +77,15 @@ Examples
 
 - For the creation of examples, use the operations in tests/tests_diffindiff.py (if available)
 - Do NOT use comments ("# ...") within examples
-
 - Do NOT explain the code outside the docstring.
 - Do NOT change the function signature.
 - Use precise technical terminology.
 - Be concise and professional.
-
 - ANY parameter MUST have its own entry in the "Parameters" section of the docstring
-
 - NEVER add a "Notes" section.
-
+- ALWAYS add a "Returns" section.
 - The description of the verbose parameter is ALWAYS: "If True, print progress messages."
+- Add a "Raises" section only if an exception is clearly present in the code.
 
 - If there is already a docstring, read and check it for the rules mentioned here.
 - If the docstring conforms to the rules, do NOT change it. If it does not conform to the rules, change it accordingly. 
@@ -96,7 +94,6 @@ Examples
 
 - Always use "parameter" rather than "argument".
 - Use "returns" instead of "outputs".
-- Use "Raises" only if an exception is clearly present in the code.
 
 ## Style
 
