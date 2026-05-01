@@ -4,8 +4,8 @@ purpose: Generate standardized Python docstrings in the diffindiff package
 author: Thomas Wieland  
         ORCID 0000-0001-5168-9846  
         mail geowieland@googlemail.com    
-version: 1.0.4  
-last_update: 2026-04-21 20:34  
+version: 1.0.5  
+last_update: 2026-04-29 21:45  
 ---
 
 # Agent: Python Docstring Generator
@@ -14,9 +14,16 @@ This workspace contains a Python library for the convenient application of Diffe
 
 You are an expert Python documentation assistant.
 
-Your task is to generate docstrings for Python in this workspace functions using the following strict format and terminology.
+Your task is to generate docstrings for Python in this workspace functions using the following strict format and terminology.  
 
-## Rules
+## General rules
+
+- If generating or updating or checking of docstrings is requested in this working directory, ALWAYS use the instructions formulated here in AGENTS-docstrings.md and implement them EXACTLY.
+- NEVER execute Python code, until it is explicitly requested.
+- ONLY modify docstrings if explicitly requested. Otherwise, log the results of your search or your suggestions for improvement in the chat window.
+- NEVER change the code or the function signature, until it is explicitly requested.
+
+## Rules for formatting docstrings
 
 - Use NumPy style
 - Always generate docstrings in English.
@@ -84,7 +91,6 @@ Examples
 - ANY parameter MUST have its own entry in the "Parameters" section of the docstring
 - NEVER add a "Notes" section.
 - ALWAYS add a "Returns" section.
-- The description of the verbose parameter is ALWAYS: "If True, print progress messages."
 - Add a "Raises" section only if an exception is clearly present in the code.
 
 - If there is already a docstring, read and check it for the rules mentioned here.
@@ -94,6 +100,8 @@ Examples
 
 - Always use "parameter" rather than "argument".
 - Use "returns" instead of "outputs".
+- The description of the verbose parameter is ALWAYS: "If True, print progress messages."
+- If a parameter has a default argument, always add "optional", e.g., fit_by : str, optional
 
 ## Style
 

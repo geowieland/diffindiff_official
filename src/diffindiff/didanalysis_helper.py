@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.1.3
-# Last update: 2025-03-24 18:01
+# Version:     1.2.0
+# Last update: 2025-05-01 09:28
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -99,6 +99,299 @@ def create_fixed_effects(
         dummy_unit_vars,
         dummy_unit_original
         ]
+
+def demean_variables(
+    data: pd.DataFrame,
+    unit_col: str,
+    time_col: str,
+    outcome_col: str,
+    treatment_col: list,
+    covariates: list = None,
+    spillover_vars: list = None,
+    interactions: list = None,
+    TG_col: list = None,
+    TT_col: list = None,
+    after_treatment_col: list = None,
+    ATT_col: list = None,
+    FE_unit: bool = False,
+    FE_time: bool = False,
+    max_iter=10,
+    tol=1e-8,
+    verbose: bool = config.VERBOSE    
+    ):
+    
+    """
+    Demean numeric variables by removing unit and/or time means.
+
+    The function appends demeaned versions of the specified variables to a copy
+    of `data`. Demeaning can be done by unit means, by time means, or by an
+    iterative two-way procedure that alternates unit- and time-demeaning until
+    convergence (or until `max_iter` is reached).
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Panel data containing unit and time identifiers and the variables to demean.
+    unit_col : str
+        Column name identifying the cross-sectional unit (e.g. individual or region).
+    time_col : str
+        Column name identifying the time period (e.g. year, date index).
+    outcome_col : str
+        Name of the primary outcome variable to be demeaned (included in the
+        returned mapping).
+    treatment_col : list
+        List of treatment variable names to be demeaned.
+    covariates : list, optional
+        Additional covariate column names to demean (default: None).
+    spillover_vars : list, optional
+        Names of spillover variables to demean (default: None).
+    interactions : list, optional
+        Names of interaction variables to demean (default: None).
+    FE_unit : bool, optional
+        If True, remove unit means (within-unit demeaning). Default is False.
+    FE_time : bool, optional
+        If True, remove time means (within-time demeaning). Default is False.
+    max_iter : int, optional
+        Maximum number of iterations for the iterative two-way demeaning
+        (when both `FE_unit` and `FE_time` are requested). Default is 10.
+    tol : float, optional
+        Convergence tolerance for iterative demeaning. Iteration stops when the
+        maximum absolute change across observations is below `tol`. Default is 1e-8.
+    verbose : bool, optional
+        If True, print progress and informational messages (default: config.VERBOSE).
+
+    Returns
+    -------
+    tuple
+        (data_demean, cols_to_demean_new)
+        - data_demean : pandas.DataFrame
+            A copy of `data` with new demeaned columns appended. Each original
+            column receives a new column named ``<orig><DELIMITER><suffix>``.
+        - cols_to_demean_new : dict
+            Dictionary mapping the original variable categories to their new
+            demeaned column names. Keys include: ``outcome_col``, ``treatment_col``, 
+            ``covariates``, ``spillover_vars``, ``interactions``.
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({
+    ...     'unit': ['a','a','b','b'],
+    ...     'time': [1,2,1,2],
+    ...     'y': [1.0,2.0,3.0,4.0],
+    ...     'x1': [10,11,12,13]
+    ...     })
+    >>> data_demean, cols_to_demean_new = demean_variables(
+    ...     data=df,
+    ...     unit_col='unit',
+    ...     time_col='time',
+    ...     outcome_col='y',
+    ...     treatment_col=[],
+    ...     covariates=['x1'],
+    ...     FE_unit=True,
+    ...     FE_time=False
+    ...     )
+    """
+
+    def demean(numeric_vector):
+        
+        numeric_vector_demeaned = numeric_vector - numeric_vector.mean()
+        
+        return numeric_vector_demeaned
+
+    if covariates is None:
+        covariates = []
+    if spillover_vars is None:
+        spillover_vars = []
+    if interactions is None:
+        interactions = []
+    if TG_col is None:
+        TG_col = []
+    if TT_col is None:
+        TT_col = []
+    if after_treatment_col is None:
+        after_treatment_col = []
+    if ATT_col is None:
+        ATT_col = []
+
+    data_demean = data.copy()
+    
+    cols_to_demean = [outcome_col] + treatment_col + covariates + spillover_vars + interactions
+    
+    cols_to_demean_new = {}
+    cols_to_demean_new["outcome_col"] = ""
+    cols_to_demean_new["treatment_col"] = {}
+    cols_to_demean_new["covariates"] = {}
+    cols_to_demean_new["spillover_vars"] = {}
+    cols_to_demean_new["interactions"] = {}
+    cols_to_demean_new["TG_col"] = {}
+    cols_to_demean_new["TT_col"] = {}
+    cols_to_demean_new["after_treatment_col"] = {}
+    cols_to_demean_new["ATT_col"] = {}
+
+    suffix = f"{config.DELIMITER}{config.DEMEAN_SUFFIX}"
+
+    if not FE_unit and not FE_time:
+        
+        print("NOTE: Neither 'FE_unit' nor 'FE_time' is set to True. No demeaning will be performed.")
+        
+        for col in cols_to_demean:
+
+            if col == outcome_col:
+                cols_to_demean_new["outcome_col"] = col
+            elif col in treatment_col:
+                cols_to_demean_new["treatment_col"][col] = col
+            elif col in spillover_vars:
+                cols_to_demean_new["spillover_vars"][col] = col
+            elif col in interactions:
+                cols_to_demean_new["interactions"][col] = col
+            elif col in TG_col:
+                cols_to_demean_new["TG_col"][col] = col
+            elif col in TT_col:
+                cols_to_demean_new["TT_col"][col] = col
+            elif col in after_treatment_col:
+                cols_to_demean_new["after_treatment_col"][col] = col
+            elif col in ATT_col:
+                cols_to_demean_new["ATT_col"][col] = col
+            else:
+                cols_to_demean_new["covariates"][col] = col
+    
+    else:
+        
+        tools.check_columns(
+            df = data,
+            columns = cols_to_demean + [unit_col] + [time_col],
+            verbose = verbose
+            )
+                
+        tools.is_numeric(
+            df = data,
+            columns = cols_to_demean,
+            verbose = verbose
+            )
+         
+        if FE_unit and not FE_time:
+            
+            if verbose:
+                print(f"Demeaning variables {', '.join(cols_to_demean)} by removing unit means", end = " ... ")
+
+            for col in cols_to_demean:
+                
+                col_demeaned = f"{col}{suffix}"
+                
+                data_demean[col_demeaned] = data_demean.groupby(data_demean[unit_col])[col].transform(demean)
+                
+                if col == outcome_col:
+                    cols_to_demean_new["outcome_col"] = col_demeaned
+                elif col in treatment_col:
+                    cols_to_demean_new["treatment_col"][col] = col_demeaned
+                elif col in spillover_vars:
+                    cols_to_demean_new["spillover_vars"][col] = col_demeaned
+                elif col in interactions:
+                    cols_to_demean_new["interactions"][col] = col_demeaned
+                elif col in TG_col:
+                    cols_to_demean_new["TG_col"][col] = col_demeaned
+                elif col in TT_col:
+                    cols_to_demean_new["TT_col"][col] = col_demeaned
+                elif col in after_treatment_col:
+                    cols_to_demean_new["after_treatment_col"][col] = col_demeaned
+                elif col in ATT_col:
+                    cols_to_demean_new["ATT_col"][col] = col_demeaned
+                else:
+                    cols_to_demean_new["covariates"][col] = col_demeaned
+
+            if verbose:
+                print("OK")
+
+        elif FE_time and not FE_unit:
+
+            if verbose:
+                print(f"Demeaning variables {', '.join(cols_to_demean)} by removing time means", end = " ... ")
+
+            for col in cols_to_demean:
+
+                col_demeaned = f"{col}{suffix}"
+                
+                data_demean[col_demeaned] = data_demean.groupby(data_demean[time_col])[col].transform(demean)
+                
+                if col == outcome_col:
+                    cols_to_demean_new["outcome_col"] = col_demeaned
+                elif col in treatment_col:
+                    cols_to_demean_new["treatment_col"][col] = col_demeaned
+                elif col in spillover_vars:
+                    cols_to_demean_new["spillover_vars"][col] = col_demeaned
+                elif col in interactions:
+                    cols_to_demean_new["interactions"][col] = col_demeaned
+                elif col in TG_col:
+                    cols_to_demean_new["TG_col"][col] = col_demeaned
+                elif col in TT_col:
+                    cols_to_demean_new["TT_col"][col] = col_demeaned
+                elif col in after_treatment_col:
+                    cols_to_demean_new["after_treatment_col"][col] = col_demeaned
+                elif col in ATT_col:
+                    cols_to_demean_new["ATT_col"][col] = col_demeaned
+                else:
+                    cols_to_demean_new["covariates"][col] = col_demeaned
+
+            if verbose:
+                print("OK")
+
+        else:
+
+            if verbose:
+                print(f"Demeaning variables {', '.join(cols_to_demean)} by iteratively removing unit and time means with max. {max_iter} iterations and tolerance = {tol}", end = " ... ")
+
+            cols_steps = {}
+            
+            for col in cols_to_demean:
+
+                v = data_demean[col].copy()
+                
+                for step in range(max_iter):
+
+                    v_old = v.copy()
+                    
+                    v = v.groupby(data_demean[unit_col]).transform(demean)
+                    
+                    v = v.groupby(data_demean[time_col]).transform(demean)
+                    
+                    if (v - v_old).abs().max() < tol:
+
+                        cols_steps[col] = step + 1
+                        
+                        break
+
+                    if step+1 == max_iter:
+                        
+                        cols_steps[col] = step + 1
+                        print(f"WARNING: Demeaning for column '{col}' did not converge within {max_iter} iterations. Consider increasing 'max_iter' or 'tol' parameters.")
+                
+                col_demeaned = f"{col}{suffix}" 
+                data_demean[col_demeaned] = v
+
+                if col == outcome_col:
+                    cols_to_demean_new["outcome_col"] = col_demeaned
+                elif col in treatment_col:
+                    cols_to_demean_new["treatment_col"][col] = col_demeaned
+                elif col in spillover_vars:
+                    cols_to_demean_new["spillover_vars"][col] = col_demeaned
+                elif col in interactions:
+                    cols_to_demean_new["interactions"][col] = col_demeaned
+                elif col in TG_col:
+                    cols_to_demean_new["TG_col"][col] = col_demeaned
+                elif col in TT_col:
+                    cols_to_demean_new["TT_col"][col] = col_demeaned
+                elif col in after_treatment_col:
+                    cols_to_demean_new["after_treatment_col"][col] = col_demeaned
+                elif col in ATT_col:
+                    cols_to_demean_new["ATT_col"][col] = col_demeaned
+                else:
+                    cols_to_demean_new["covariates"][col] = col_demeaned                
+            
+            if verbose:
+                print("OK")
+                print(f"NOTE: Demeaning completed in {max_iter} iterations with the following number of steps until convergence: {', '.join([f'{col}: {steps}' for col, steps in cols_steps.items()])}.")
+        
+    return data_demean, cols_to_demean_new
 
 def create_specific_time_trends(    
     data: pd.DataFrame,

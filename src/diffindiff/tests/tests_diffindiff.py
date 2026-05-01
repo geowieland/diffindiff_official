@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.0.14
-# Last update: 2026-03-16 17:35
+# Version:     2.0.15
+# Last update: 2026-05-01 09:54
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -216,7 +216,8 @@ curfew_placebo.summary()
 
 curfew_model_FE=curfew_data.analysis(
     FE_unit=True, 
-    FE_time=True
+    FE_time=True,
+    verbose = True
     )
 # Model analysis of created data with fixed effects for 
 # units (FE_unit=True) and time (FE_time=True)
@@ -236,7 +237,23 @@ curfew_model_FE.plot(
 
 fixed_effects = curfew_model_FE.fixed_effects()
 # Fixed effects of CHBW_data_model_FE
-print(fixed_effects)
+#print(fixed_effects)
+
+
+# Model with demeaned variables:
+
+curfew_model_demean=curfew_data.analysis(
+    FE_unit=True, 
+    FE_time=True,
+    intercept=False,
+    demean=True
+    )
+# Model analysis of created data with demeaned vars instead of 
+# fixed effects for units (FE_unit=True) and time (FE_time=True)
+
+curfew_model_demean_summary = curfew_model_demean.summary()
+# Model summary
+
 
 # Model with after treatment period:
 

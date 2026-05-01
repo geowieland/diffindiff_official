@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.3
-# Last update: 2026-03-24 20:21
+# Version:     2.2.4
+# Last update: 2026-04-28 21:45
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -20,10 +20,13 @@ from sklearn.ensemble import BaggingRegressor, RandomForestRegressor, GradientBo
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPRegressor
 import diffindiff.config as config
 
 
@@ -117,9 +120,11 @@ def is_numeric(
         
         for col in columns:
         
-            if not pd.api.types.is_numeric_dtype(df[col]):
+            try:
+                df[col] = df[col].astype(float)
+            except Exception:
                 non_numeric_columns.append(col)
-        
+                    
         if verbose:
             print("OK")
         
@@ -578,7 +583,7 @@ def is_notreatment(
 
     data_relevant = data[[unit_col, treatment_col]]
 
-    treatment_timepoints = data_relevant.groupby(unit_col).sum(treatment_col)
+    treatment_timepoints = (data_relevant.groupby(unit_col)[treatment_col].sum())
     treatment_timepoints = treatment_timepoints.reset_index()
 
     no_treatment = (treatment_timepoints[treatment_col] == 0).any()
@@ -1122,7 +1127,7 @@ def date_counter(
             
         dates = df[date_col].unique()
 
-        date_counter = pd.DataFrame(
+        date_counter_df = pd.DataFrame(
             {
                 'date': dates,
                 new_col: range(1, len(dates) + 1)
@@ -1130,7 +1135,7 @@ def date_counter(
             )
 
         df = df.merge(
-            date_counter,
+            date_counter_df,
             left_on = date_col,
             right_on = "date"
             )
@@ -1313,22 +1318,30 @@ def model_wrapper(
     X_test: list = None, 
     y_train: list = None, 
     y_test: list = None,
-    model_n_estimators = 1000,
-    model_max_features = 0.9,
-    model_min_samples_split = 2,
-    rf_max_depth = None,
-    gb_iterations = 100,
-    gb_max_depth = 3,
-    gb_learning_rate = 0.1,
-    knn_n_neighbors = 5,
-    svr_kernel = "rbf",
-    xgb_learning_rate = 0.1,
-    lgbm_learning_rate = 0.1,
-    random_state = 71,
+    model_n_estimators: int = 1000,
+    model_max_features: float = 0.9,
+    model_min_samples_split: int = 2,
+    rf_max_depth: int = None,
+    gb_iterations: int = 100,
+    gb_max_depth: int = 3,
+    gb_learning_rate: float = 0.1,
+    knn_n_neighbors: int = 5,
+    svr_kernel: str = "rbf",
+    xgb_learning_rate: float = 0.1,
+    lgbm_learning_rate: float = 0.1,
+    mlp_max_iter: int = 200,
+    mlp_hidden_layer_sizes: tuple = (100,),
+    mlp_activation: str = "relu",
+    mlp_solver: str = "adam",
+    mlp_alpha: float = 0.0001,
+    mlp_learning_rate: str = "constant",
+    mlp_learning_rate_init: float = 0.001,
+    random_state: int = 71,
     verbose: bool = config.VERBOSE
     ):
 
     """
+
     Train a machine learning or OLS regression model and return predictions and metrics.
 
     Parameters
@@ -1397,6 +1410,20 @@ def model_wrapper(
         Weighting with respect to the contribution of each tree
         in the Light Gradient Boosting algorithm.
         Passed to `LGBMRegressor`; see the corresponding documentation.
+    mlp_max_iter : int, optional
+        Maximum number of iterations for the Multi-layer Perceptron algorithm.
+    mlp_hidden_layer_sizes : tuple, optional
+        The ith element represents the number of neurons in the ith hidden layer.    
+    mlp_activation : str, optional
+        Activation function for the Multi-layer Perceptron algorithm: {"relu", "identity", "logistic", "tanh"}.
+    mlp_solver : str, optional
+        The solver for weight optimization in the Multi-layer Perceptron algorithm: {"lbfgs", "sgd", "adam"}.
+    mlp_alpha: float, optional
+        L2 penalty (regularization term) parameter for the Multi-layer Perceptron algorithm
+    mlp_learning_rate : str, optional
+        Learning rate schedule for weight updates in the Multi-layer Perceptron algorithm: {"constant", "invscaling", "adaptive"}.
+    mlp_learning_rate_init: float, optional
+        Initial learning rate for weight updates in the Multi-layer Perceptron algorithm.
     random_state : int, optional
         Random seed for reproducibility.
         Passed to `sklearn.model_selection.train_test_split`
@@ -1407,7 +1434,7 @@ def model_wrapper(
     Returns
     -------
     list
-        [y_pred (array), model (estimator), metrics (dict), params (dict)]
+        [y_pred (array), model (estimator), metrics (dict), params (dict), train/test split data (list)]
 
     Raises
     ------
@@ -1422,9 +1449,6 @@ def model_wrapper(
     if model_type not in config.MODEL_WRAPPER_AVAILABLE_LIST:
         raise ValueError(f"Please enter a valid model type: {', '.join(config.MODEL_WRAPPER_AVAILABLE_LIST)}.")
     
-    if verbose:
-        print("Setting up training and testing data", end = " ... ")
-
     if X_train is None:
         X_train = []
     if X_test is None:
@@ -1439,13 +1463,20 @@ def model_wrapper(
     if len(X_train) > 0 and len(X_test) > 0 and len(y_train) > 0 and len(y_test) > 0:
         
         if len(X_train) != len(y_train) or len(X_test) != len(y_test):
-            raise ValueError(f"Train resp. tests subsets y and X must have the same length.")
+            raise ValueError(f"Train resp. tests subsets y and X must have the same length: {len(y_train)}, {len(X_train)}, {len(y_test)}, {len(X_test)}.")
         
         else:
+            
             self_defined_split = True
+            
+            if verbose:
+                print(f"Setting up training and testing data for {config.MODEL_WRAPPER_AVAILABLE[model_type]} with user-defined split", end = " ... ")
         
     else:
 
+        if verbose:
+            print(f"Setting up training and testing data for {config.MODEL_WRAPPER_AVAILABLE[model_type]} with automatic split", end = " ... ")
+            
         X_train, X_test, y_train, y_test = train_test_split(
             X, 
             y, 
@@ -1465,72 +1496,126 @@ def model_wrapper(
         else:
             print(f"NOTE: Random train and test subsets were built with test_size = {test_size} and train_size = {train_size}.")
             
-        print(f"Training {model_type} model", end = " ... ")
+        print(f"Training {config.MODEL_WRAPPER_AVAILABLE[model_type]} model", end = " ... ")
     
     model = None
     y_pred = None
+    metrics = None
+    model_estimation_error = False
+    model_estimation_error_text = ""
 
-    if model_type == "ols":
-        model = LinearRegression()    
-    elif model_type == "olsbg":
-        model = BaggingRegressor(
-            estimator = LinearRegression(),
-            n_estimators = model_n_estimators,         
-            random_state = random_state
-        )         
-    elif model_type == "dtbg":
-        model = BaggingRegressor(
-            estimator = DecisionTreeRegressor(),
-            n_estimators = model_n_estimators,         
-            random_state = random_state
-        )    
-    elif model_type == "rf":
-        model = RandomForestRegressor(
-            n_estimators = model_n_estimators, 
-            max_features = model_max_features,
-            min_samples_split = model_min_samples_split,
-            max_depth = rf_max_depth,
-            random_state = random_state
-        )
-    elif model_type == "gb":
-        model = GradientBoostingRegressor(
-            learning_rate = gb_learning_rate,
-            n_estimators = gb_iterations, 
-            max_features = model_max_features,
-            min_samples_split = model_min_samples_split,
-            max_depth = gb_max_depth,
-            random_state = random_state
-        )
-    elif model_type == "knn":
-        model = KNeighborsRegressor(n_neighbors=knn_n_neighbors)
-    elif model_type == "svr":
-        model = SVR(kernel=svr_kernel)
-    elif model_type == "xgb":
-        model = XGBRegressor(
-            learning_rate = xgb_learning_rate,
-            n_estimators = gb_iterations,
-            random_state = random_state
-        )
-    elif model_type == "lgbm":
-        model = LGBMRegressor(
-            learning_rate = lgbm_learning_rate,
-            n_estimators = gb_iterations,
-            random_state = random_state
-        )
+    try:
+
+        if model_type == "ols":
+            model = LinearRegression()
+
+        elif model_type == "olsbg":
+            model = BaggingRegressor(
+                estimator = LinearRegression(),
+                n_estimators = model_n_estimators,         
+                random_state = random_state
+            )
+                
+        elif model_type == "dtbg":
+            model = BaggingRegressor(
+                estimator = DecisionTreeRegressor(),
+                n_estimators = model_n_estimators,         
+                random_state = random_state
+            )
+            
+        elif model_type == "rf":
+            model = RandomForestRegressor(
+                n_estimators = model_n_estimators, 
+                max_features = model_max_features,
+                min_samples_split = model_min_samples_split,
+                max_depth = rf_max_depth,
+                random_state = random_state
+            )
+            
+        elif model_type == "gb":
+            model = GradientBoostingRegressor(
+                learning_rate = gb_learning_rate,
+                n_estimators = gb_iterations, 
+                max_features = model_max_features,
+                min_samples_split = model_min_samples_split,
+                max_depth = gb_max_depth,
+                random_state = random_state
+            )
+            
+        elif model_type == "knn":
+            model = KNeighborsRegressor(n_neighbors=knn_n_neighbors)
+            
+        elif model_type == "svr":
+            model = SVR(kernel=svr_kernel)
+            
+        elif model_type == "xgb":
+            model = XGBRegressor(
+                learning_rate = xgb_learning_rate,
+                n_estimators = gb_iterations,
+                random_state = random_state
+            )
+            
+        elif model_type == "lgbm":
+            model = LGBMRegressor(
+                learning_rate = lgbm_learning_rate,
+                n_estimators = gb_iterations,
+                random_state = random_state
+            )
+            
+        elif model_type == "mlp":
+            model = Pipeline(
+                [
+                    (
+                    "scaler", 
+                    StandardScaler()
+                    ),
+                    (
+                    "mlp", 
+                    MLPRegressor(
+                        hidden_layer_sizes=mlp_hidden_layer_sizes,
+                        activation=mlp_activation,
+                        solver=mlp_solver,
+                        max_iter=mlp_max_iter,
+                        alpha=mlp_alpha,
+                        learning_rate=mlp_learning_rate,
+                        learning_rate_init=mlp_learning_rate_init,
+                        random_state=random_state
+                        )
+                    )
+                ]
+            )
         
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-
+        model.fit(X_train, y_train)
+        
+    except Exception as e:
+                
+        model_estimation_error = True
+        model_estimation_error_text = str(e)
+    
     if verbose:
         print("OK")
+        
+    if model_estimation_error:
+        
+        print(f"WARNING: The desired {config.MODEL_WRAPPER_AVAILABLE[model_type]} model was not estimated. No fits and fit metrics available. The following error occurred: '{model_estimation_error_text}'.")
     
-    metrics = fit_metrics(
-        observed = y_test, 
-        expected = y_pred,        
-        remove_nan = True,
-        verbose = verbose
-        )
+    else:
     
+        if verbose:
+            print(f"Predicting with the trained {config.MODEL_WRAPPER_AVAILABLE[model_type]} model", end = " ... ")
+            
+        y_pred = model.predict(X_test)
+        
+        if verbose:
+            print("OK")
+        
+        metrics = fit_metrics(
+            observed = y_test,
+            expected = y_pred,
+            remove_nan = True,
+            verbose = verbose
+            )
+        
     params = {
         "model_type": model_type,
         "model_type_description": config.MODEL_WRAPPER_AVAILABLE[model_type],
@@ -1548,14 +1633,27 @@ def model_wrapper(
         "knn_n_neighbors": knn_n_neighbors,
         "svr_kernel": svr_kernel,
         "xgb_learning_rate": xgb_learning_rate,
-        "lgbm_learning_rate": lgbm_learning_rate        
+        "lgbm_learning_rate": lgbm_learning_rate,
+        "mlp_hidden_layer_sizes": mlp_hidden_layer_sizes,
+        "mlp_activation": mlp_activation,
+        "mlp_solver": mlp_solver,
+        "mlp_max_iter": mlp_max_iter,
+        "mlp_alpha": mlp_alpha,
+        "mlp_learning_rate": mlp_learning_rate,
+        "mlp_learning_rate_init": mlp_learning_rate_init
         }
     
     return [
         y_pred,
         model,
         metrics,
-        params
+        params,
+        (
+            X_train, 
+            X_test, 
+            y_train, 
+            y_test
+        )
         ]
 
 def fit_metrics(
@@ -1621,7 +1719,7 @@ def fit_metrics(
     if len(type_errors) > 0:
         raise TypeError(f"Error(s) while calculating fit metrics: {', '.join(type_errors)}")
     
-    if outcome_col is not None:
+    if outcome_col is not None and isinstance(outcome_col, str):
         outcome_observed_col = f"{outcome_col}{config.DELIMITER}{config.OBSERVED_SUFFIX}"
         outcome_expected_col = f"{outcome_col}{config.DELIMITER}{config.EXPECTED_SUFFIX}"
     else:
@@ -1706,12 +1804,13 @@ def fit_metrics(
     MAE = float(SAR/observed_no)    
     sMAPE = float(np.mean(sAPE))
     
-    if indep_vars_no is not None and isinstance(indep_vars_no, int):
-        RSQ_ADJ = (1-(1-RSQ)*((observations-1)/(observations-indep_vars_no-1)))
-        
-    else:
-            
-        RSQ_ADJ = np.nan        
+    RSQ_ADJ = np.nan
+    if indep_vars_no is not None:        
+        try:
+            indep_vars_no = int(indep_vars_no)
+            RSQ_ADJ = (1-(1-RSQ)*((observations-1)/(observations-indep_vars_no-1)))
+        except:
+            pass                
 
     model_fit_metrics = {
         list(config.MODEL_FIT_METRICS.keys())[0]: SSR,

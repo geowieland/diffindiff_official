@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.8
-# Last update: 2026-04-21 20:31
+# Version:     2.4.0
+# Last update: 2026-05-01 09:52
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -158,12 +158,12 @@ class DiffModel:
                
         if treatment is not None:
             
-            if treatment not in model_config["treatment_col"]:
-                raise ValueError(f"Treatment {treatment} not in model object.")
+            if treatment not in model_data.columns:
+                raise ValueError(f"Treatment '{treatment}' not in model object.")
         else:
             
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment {treatment} for analysis.")
+            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for calculating treatment statistics.")
 
         if after_treatment_col is not None:
             
@@ -171,7 +171,7 @@ class DiffModel:
                 raise ValueError("Model object does not include an after-treatment period.")
             
             if after_treatment_col not in model_config["after_treatment_col"]:
-                raise ValueError(f"Treatment {treatment} not in model object.")
+                raise ValueError(f"Treatment '{treatment}' not in model object.")
 
         unit_col = model_config["unit_col"]
         time_col = model_config["time_col"]
@@ -424,13 +424,13 @@ class DiffModel:
                 model_fit_metrics_rows.append(
                     {
                         config.MODEL_FIT_METRICS_DESCRIPTION: description, 
-                        config.DIAGNOSTICS_COLUMN: value
+                        config.DIAGNOSTICS_COLUMN: round(float(value), config.ROUND_STATISTIC) if value is not None else None
                         }
                         )
-
-        model_fit_metrics_df = pd.DataFrame(model_fit_metrics_rows)            
+        
+        model_fit_metrics_df = pd.DataFrame(model_fit_metrics_rows)
         model_fit_metrics_df = model_fit_metrics_df.reset_index(drop=True)
-           
+        
         return model_fit_metrics_df   
 
     def treatment_effects(self):
@@ -730,8 +730,7 @@ class DiffModel:
         """
 
         model_config = self.data[1]
-        no_covariates = len(model_config["covariates"])
-        
+        no_covariates = len(model_config["covariates"])        
 
         treatment_effects_df = self.treatment_effects()        
         
@@ -800,6 +799,7 @@ class DiffModel:
         width = model_fit_metrics[config.MODEL_FIT_METRICS_DESCRIPTION].str.len().max()
         model_fit_metrics[config.MODEL_FIT_METRICS_DESCRIPTION] = model_fit_metrics[config.MODEL_FIT_METRICS_DESCRIPTION].str.ljust(width)
         model_fit_metrics[config.DIAGNOSTICS_COLUMN] = model_fit_metrics[config.DIAGNOSTICS_COLUMN].round(config.ROUND_STATISTIC)
+        model_fit_metrics[config.DIAGNOSTICS_COLUMN] = model_fit_metrics[config.DIAGNOSTICS_COLUMN].map(f'{{:.{config.ROUND_STATISTIC}f}}'.format)
         
         print(f"{config.MODEL_FIT_METRICS_DESCRIPTION}s")
         print(model_fit_metrics.to_string(index=False, header=False))
@@ -1092,13 +1092,13 @@ class DiffModel:
         outcome_col = model_config["outcome_col"]
 
         model_data = self.data[2]
-             
+                           
         if treatment is not None:
             if treatment not in model_config["treatment_col"]:
-                raise ValueError (f"Treatment {treatment} not in model object.")
+                raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment {treatment} for analysis.")
+            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for calculating counterfactual.")
 
         if after_treatment_col is not None:
             if len(model_config["after_treatment_col"]) == 0:
@@ -1308,38 +1308,48 @@ class DiffModel:
 
         model_config = self.data[1]
         model_data = self.data[2]
-             
+        
         if treatment is not None:
             if treatment not in model_config["treatment_col"]:
-                raise ValueError (f"Treatment {treatment} not in model object.")
+                raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment {treatment} for analysis.")
+            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for placebo analysis.")
 
         if after_treatment_col is not None:
             if len(model_config["after_treatment_col"]) == 0:
                 raise ValueError ("Model object does not include after-treatment period.")
             if after_treatment_col not in model_config["after_treatment_col"]:
-                raise ValueError (f"Treatment {treatment} not in model object.")
+                raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
             after_treatment_col = []
 
         if divide <= 0 or divide > 1:
-            raise ValueError("Parameter share must be > 0 and <= 1")
+            raise ValueError("Parameter 'share' must be > 0 and <= 1")
         if resample <= 0 or resample > 1:
-            raise ValueError("Parameter resample must be > 0 and <= 1")
+            raise ValueError("Parameter 'resample' must be > 0 and <= 1")
         
+        if model_config["demean"]:
+
+            treatment_demeaned = treatment
+            treatment = treatment.replace(f"{config.DELIMITER}{config.DEMEAN_SUFFIX}", "")
+
+            print(f"NOTE: Data is demeaned. Treatment statistics are calculated based on original treatment '{treatment}'.")
+       
         treatment_statistics = self.treatment_statistics(treatment = treatment)
+
+        if model_config["demean"]:
+            treatment = treatment_demeaned
         
         TG_col_ = f"{config.TG_COL}{config.DELIMITER}{treatment}"
         TT_col_ = f"{config.TT_COL}{config.DELIMITER}{treatment}"
-        TGxTT_ = f"Placebo{config.DELIMITER}{treatment}"        
+        TGxTT_ = f"{config.PLACEBO_PREFIX}{config.DELIMITER}{treatment}"        
         
         treatment_col_errors = []
         if TG_col is None and TG_col_ not in model_config["TG_col"]:
             treatment_col_errors.append(f"No treatment group identification variable for treatment '{treatment}'. State parameter 'TG_col' = <<your_treatment_group_dummy>> (e.g., 'TG_{treatment}').")        
         if TT_col is None and TT_col_ not in model_config["TT_col"]:
-            treatment_col_errors.append(f"No treatment time variable for treatment '{treatment}'. State parameter 'TT_col' = <<your_treatment_time_dummy>> (e.g., 'TT_{treatment}.)")
+            treatment_col_errors.append(f"No treatment time variable for treatment '{treatment}'. State parameter 'TT_col' = <<your_treatment_time_dummy>> (e.g., 'TT_{treatment}'.)")
         if len(treatment_col_errors) > 0:
             raise ValueError(f"Missing arguments in placebo analysis: {' '.join(treatment_col_errors)}")        
         
@@ -1350,7 +1360,7 @@ class DiffModel:
 
         unit_col = model_config["unit_col"]
         time_col = model_config["time_col"]
-        
+                
         groups = treatment_statistics[2]
         control_group = groups[1]
         control_group_N = len(control_group)
@@ -1463,10 +1473,10 @@ class DiffModel:
 
         if treatment is not None:
             if treatment not in model_config["treatment_col"]:
-                raise ValueError (f"Treatment {treatment} not in model object.")
+                raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment {treatment} for analysis.")
+            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for plotting timeline.")
                 
         if treatment_group_only:
             if TG_col is None:
@@ -1612,11 +1622,14 @@ class DiffModel:
         outcome_col = model_config["outcome_col"]
         outcome_col_predicted = f"{outcome_col}{config.DELIMITER}{config.PREDICTED_SUFFIX}"
 
+        model_data = self.data[2]
+        model_data = model_data.reset_index()
+
         if TG_col is None and treatment is None:            
             if no_treatments == 1:
-                raise ValueError ("Model object has no column for treatment group with respect to one treatment. Set parameter treatment = [your_treatment].")
+                raise ValueError ("Model object has no column for treatment group with respect to one treatment. Set parameter 'treatment' = <<your_treatment>>.")
             else:
-                raise ValueError ("Model object has no column for treatment group with respect to ", str(no_treatments), " treatments. Choose one with parameter treatment.")
+                raise ValueError ("Model object has no column for treatment group with respect to ", str(no_treatments), " treatments. Choose one with parameter 'treatment'.")
 
         if treatment is not None:
             
@@ -1626,7 +1639,7 @@ class DiffModel:
                 )
                   
             if not treatment_included:                
-                raise ValueError (f"Treatment {treatment} not in model object")
+                raise ValueError (f"Treatment '{treatment}' not in model object")
             
             for key, value in treatment_diagnostics.items():
                 if value["treatment"] == treatment:                
@@ -1634,7 +1647,7 @@ class DiffModel:
                     break                        
         else:
             
-            print(f"NOTE: No treatment was stated. Choosing treatment {treatment_diagnostics[0]['treatment']} for plotting.")
+            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment_diagnostics[0]['treatment']}' for plotting.")
 
             treatment_group = treatment_diagnostics[0]["treatment_group"]            
             treatment = treatment_diagnostics[0]["treatment"]
@@ -1650,8 +1663,6 @@ class DiffModel:
         assert len(lines_style) == lines_style_required, f"Parameter 'lines_style' must be a list with {lines_style_required} entries"
         assert len(lines_labels) == lines_labels_required, f"Parameter 'lines_labels' must be a list with {lines_labels_required} entries"
             
-        model_data = self.data[2]
-        model_data = model_data.reset_index()
         TG_col = f"{config.TG_COL}{config.DELIMITER}{treatment}"
         model_data[TG_col] = 0
         model_data.loc[model_data[unit_col].isin(treatment_group), TG_col] = 1
@@ -1660,11 +1671,11 @@ class DiffModel:
         model_predictions = pd.DataFrame(model_predictions)
         model_predictions = model_predictions.reset_index()
         model_predictions.rename(columns = {config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[0]: outcome_col_predicted}, inplace = True)
-    
+
         model_data = pd.concat([model_data, model_predictions], axis = 1)
-        
+                
         if model_config["log_outcome"] and not retransform_log_outcome and y_lim is not None:
-            print(f"NOTE: Outcome variable was log-transformed. Plotting is on log scale, but 'y_lim' is specified. The plot presentation might be nonsensical. Set param 'retransform_log_outcome' to True to re-transform to original scale for plotting.")
+            print(f"WARNING: Outcome variable was log-transformed. Plotting is on log scale, but 'y_lim' is specified. The plot presentation might be nonsensical. Set param 'retransform_log_outcome' to True to re-transform to original scale for plotting.")
 
         if retransform_log_outcome:
 
@@ -1672,6 +1683,11 @@ class DiffModel:
 
                 if outcome_col.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):                    
                     
+                    if model_config["demean"]:
+
+                        model_data[outcome_col] = np.exp(model_data[outcome_col])
+                        model_data = model_data.rename(columns = {outcome_col: outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]})
+
                     outcome_col = outcome_col[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
                 
                 if outcome_col_predicted.startswith(f"{config.LOG_PREFIX}{config.DELIMITER}"):                    
@@ -1682,8 +1698,8 @@ class DiffModel:
                         }
                     )
                                         
-                    outcome_col_predicted = outcome_col_predicted[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]                    
-
+                    outcome_col_predicted = outcome_col_predicted[len(f"{config.LOG_PREFIX}{config.DELIMITER}"):]
+                    
                 model_data[outcome_col_predicted] = np.exp(model_data[outcome_col_predicted])
 
                 model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[2]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[2]])
@@ -1691,11 +1707,14 @@ class DiffModel:
                 model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[4]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[4]])
                 model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[5]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[5]])
                 
-                print("NOTE: Outcome variable was log-transformed, Re-transformation was applied.")
+                if model_config["demean"]:
+                    print(f"NOTE: Outcome variable '{outcome_col.replace(f'{config.DELIMITER}{config.DEMEAN_SUFFIX}', '')}' was log-transformed and demeaned. Re-transformation was applied on '{outcome_col}'.")
+                else:
+                    print(f"NOTE: Outcome variable '{outcome_col}' was log-transformed. Re-transformation was applied.")
             
             else:
                 print("NOTE: Parameter 'retransform_log_outcome' was set to True, but outcome variable was not log-transformed. No re-transformation applied.")
-                        
+        
         model_data_TG = model_data[model_data[TG_col] == 1]
         model_data_CG = model_data[model_data[TG_col] == 0]
     
@@ -2052,7 +2071,7 @@ class DiffModel:
                 )
             
             if not treatment_included:
-                raise ValueError (f"Treatment {treatment} not in model object")
+                raise ValueError (f"Treatment '{treatment}' not in model object")
             
             for key, value in treatment_diagnostics.items():
                 if value["treatment"] == treatment:
@@ -2060,7 +2079,7 @@ class DiffModel:
                     break
     
         else:
-            print(f"NOTE: No treatment was stated. Choosing treatment {treatment_diagnostics[0]['treatment']} for plotting.")
+            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment_diagnostics[0]['treatment']}' for plotting counterfactual.")
 
             treatment_group = treatment_diagnostics[0]["treatment_group"]
 
@@ -2146,6 +2165,7 @@ def did_analysis(
     FE_unit: bool = False,
     FE_time: bool = False,
     FE_group: bool = False,
+    demean: bool = False,
     cluster_SE_by: str = None,
     intercept: bool = True,
     ITE: bool = False,
@@ -2183,64 +2203,68 @@ def did_analysis(
         Treatment column(s) names.
     outcome_col : str
         Outcome variable name.
-    TG_col : list
+    TG_col : list, optional
         Treatment group indicator column(s).
-    TT_col : list
+    TT_col : list, optional
         Treatment time indicator column(s).
-    after_treatment_col : list
-        Columns indicating post-treatment periods.
-    ATT_col : list
-        Columns for average treatment on the treated calculations.
-    pre_post : bool
+    after_treatment_col : list, optional
+        After-treatment indicator column name(s).
+    ATT_col : list, optional
+        After treatment time indicator column(s).
+    pre_post : bool, optional
         Treat data as pre-post panel.
-    log_outcome : bool
+    log_outcome : bool, optional
         Log-transform the outcome.
-    log_outcome_add : float
+    log_outcome_add : float, optional
         Constant to add before log transformation.
-    FE_unit : bool
+    FE_unit : bool, optional
         Include unit fixed effects.
-    FE_time : bool
+    FE_time : bool, optional
         Include time fixed effects.
-    FE_group : bool
+    FE_group : bool, optional
         Include group fixed effects.
-    cluster_SE_by : str
+    demean : bool, optional
+        If True, demean outcome and covariates before estimation.
+        Fixed effects are replaced by demeaning when this is set to True.
+        Which FE have to be eliminated is specified by FE_unit and FE_time, respectively.
+    cluster_SE_by : str, optional
         Column name to cluster standard errors by.
-    intercept : bool
+    intercept : bool, optional
         Include intercept in the model.
-    ITE : bool
+    ITE : bool, optional
         Estimate individual treatment effects.
-    GTE : bool
+    GTE : bool, optional
         Estimate group treatment effects.
-    ITT : bool
+    ITT : bool, optional
         Include individual time trends.
-    GTT : bool
+    GTT : bool, optional
         Include group-specific time trends.
-    group_by : str
+    group_by : str, optional
         Column name defining groups.
-    covariates : list
+    covariates : list, optional, optional
         Additional covariate columns to include.
     spillover_treatment : list
         Treatment columns used to construct spillover variables.
-    spillover_units : list
+    spillover_units : list, optional
         Unit identifiers affected by spillovers.
-    interactions : dict
+    interactions : dict, optional
         Dictionary with treatment interaction variables to be
         built from treatment variables.
-    placebo : bool
+    placebo : bool, optional
         Run placebo analysis.
-    confint_alpha : float
+    confint_alpha : float, optional
         Significance level for confidence intervals.
-    bonferroni : bool
+    bonferroni : bool, optional
         Apply Bonferroni correction for multiple treatments.
-    freq : str
+    freq : str, optional
         Frequency string for date handling.
-    date_format : str
+    date_format : str, optional
         Date format string.
-    drop_missing : bool
+    drop_missing : bool, optional
         Drop missing observations before analysis.
-    missing_replace_by_zero : bool
+    missing_replace_by_zero : bool, optional
         Replace missing values by zero when requested.
-    fit_by : str
+    fit_by : str, optional
         Fitting method; e.g., 'ols_fit' or 'ml'.
     verbose : bool, optional
         If True, print progress messages.
@@ -2375,6 +2399,15 @@ def did_analysis(
         if not FE_unit:
             FE_unit = True
             print("NOTE: Quasi-experiment includes more than one treatment. Unit fixed effects are used instead of control group baseline and treatment group deviation.")
+    
+    if demean and FE_unit:
+        
+        if ITE or ITT:
+        
+            ITE = False
+            ITT = False
+            
+            print(f"NOTE: Unit fixed effects are specified to be replaced by demeaning. {config.EFFECTS_TYPES['ITE']['description']} or {config.EFFECTS_TYPES['ITT']['description']} are not supported.")
                        
     if ITE:
         
@@ -2423,9 +2456,9 @@ def did_analysis(
         
         if intercept or len(TG_col) > 0:
             print("NOTE: Quasi-experiment includes group fixed effects. Control group baseline and treatment group deviation are dropped.")   
-            
-        TG_col = []        
-        intercept = False        
+
+        TG_col = []
+        intercept = False
     
     if after_treatment_col is not None or (isinstance (after_treatment_col, list) and len(after_treatment_col) > 0):
 
@@ -2532,13 +2565,16 @@ def did_analysis(
         
     if data_diagnostics["is_prepost"] and config.AUTO_SWITCH_TO_PREPOST:
         
-        print("NOTE: Panel data is pre-post. Data processing and model estimation will treat data as pre-post")
+        print(f"NOTE: Input is {config.PREPOST_PANELDATA_DESCRIPTION}. Data processing and model estimation will treat data as pre-post.")
         
         pre_post = True
         
         FE_unit = False
         FE_time = False
         FE_group = False
+    
+    if not data_diagnostics["is_prepost"] and not FE_unit and not FE_time:
+        print(f"NOTE: Input is {config.MULTIPERIOD_PANELDATA_DESCRIPTION}. Consider including {config.EFFECTS_TYPES['FE']['description']}.")
         
     if log_outcome:
         
@@ -2571,39 +2607,41 @@ def did_analysis(
 
     FE_unit_vars = []
     dummy_unit_original = []
-
-    if FE_unit:
-
-        FE_unit_dummies = helper.create_fixed_effects(
-            data = data,
-            col = unit_col,
-            type = "unit",
-            drop_first = intercept,
-            verbose = verbose
-        )
-        
-        data = FE_unit_dummies[0]        
-        did_formula = f"{did_formula} + {FE_unit_dummies[1]}"
-        FE_unit_vars = [col for col in FE_unit_dummies[2] if col in data.columns]
-        dummy_unit_original = FE_unit_dummies[3]
-
+    
     FE_time_vars = []
     dummy_time_original = []
+    
+    if not demean:
 
-    if FE_time:
-        
-        FE_time_dummies = helper.create_fixed_effects(
-            data = data,
-            col = time_col,
-            type = "time",
-            drop_first = intercept,
-            verbose = verbose
-        )
-        
-        data = FE_time_dummies[0]
-        did_formula = f"{did_formula} + {FE_time_dummies[1]}"
-        FE_time_vars = [col for col in FE_time_dummies[2] if col in data.columns]
-        dummy_time_original = FE_time_dummies[3] 
+        if FE_unit:
+
+            FE_unit_dummies = helper.create_fixed_effects(
+                data = data,
+                col = unit_col,
+                type = "unit",
+                drop_first = intercept,
+                verbose = verbose
+            )
+            
+            data = FE_unit_dummies[0]        
+            did_formula = f"{did_formula} + {FE_unit_dummies[1]}"
+            FE_unit_vars = [col for col in FE_unit_dummies[2] if col in data.columns]
+            dummy_unit_original = FE_unit_dummies[3]
+
+        if FE_time:
+            
+            FE_time_dummies = helper.create_fixed_effects(
+                data = data,
+                col = time_col,
+                type = "time",
+                drop_first = intercept,
+                verbose = verbose
+            )
+            
+            data = FE_time_dummies[0]
+            did_formula = f"{did_formula} + {FE_time_dummies[1]}"
+            FE_time_vars = [col for col in FE_time_dummies[2] if col in data.columns]
+            dummy_time_original = FE_time_dummies[3]
 
     FE_group_vars = []
     dummy_group_original = []
@@ -2715,7 +2753,7 @@ def did_analysis(
 
         did_formula = f"{did_formula} + {spillover[1]}"
         spillover_vars = spillover[2]
-
+        
     if len(covariates) > 0:
 
         if group_by in covariates:
@@ -2740,8 +2778,71 @@ def did_analysis(
         treatment_col.extend(interactions_created[2])
         
         no_treatments = no_treatments+len(interactions)
-        
+
     indep_vars_no = indep_vars_no+len(spillover_vars)+len(covariates)+len(interactions)
+
+    cols_to_demean_new = None
+
+    if demean:
+        
+        data_demeaned = helper.demean_variables(
+            data = data,
+            unit_col = unit_col,
+            time_col = time_col,
+            outcome_col = outcome_col,
+            treatment_col = treatment_col,
+            covariates = covariates,
+            spillover_vars = spillover_vars,
+            FE_unit = FE_unit,
+            FE_time = FE_time,
+            verbose = verbose
+            )
+        
+        data = data_demeaned[0]        
+        cols_to_demean_new = data_demeaned[1]
+        
+        if verbose:
+            print(f"Replacing {len(treatment_col)+len(covariates)+len(spillover_vars)+len(spillover_vars)+1} variables by demeaned variables", end = " ... ")
+
+        outcome_col_demeaned = cols_to_demean_new["outcome_col"]        
+        did_formula = did_formula.replace(outcome_col, outcome_col_demeaned)        
+        
+        for i, treatment in enumerate(treatment_col):
+            did_formula = did_formula.replace(treatment, cols_to_demean_new["treatment_col"][treatment])
+            treatment_col[i] = cols_to_demean_new["treatment_col"][treatment]            
+
+        for i, covariate in enumerate(covariates):
+            did_formula = did_formula.replace(covariate, cols_to_demean_new["covariates"][covariate])
+            covariates[i] = cols_to_demean_new["covariates"][covariate]
+        
+        for i, spillover_var in enumerate(spillover_vars):
+            did_formula = did_formula.replace(spillover_var, cols_to_demean_new["spillover_vars"][spillover_var])
+            spillover_vars[i] = cols_to_demean_new["spillover_vars"][spillover_var]
+
+        for i, TG_col_ in enumerate(TG_col):
+            did_formula = did_formula.replace(TG_col_, cols_to_demean_new["TG_col"][TG_col_])
+            TG_col[i] = cols_to_demean_new["TG_col"][TG_col_]
+
+        for i, TT_col_ in enumerate(TT_col):
+            did_formula = did_formula.replace(TT_col_, cols_to_demean_new["TT_col"][TT_col_])
+            TT_col[i] = cols_to_demean_new["TT_col"][TT_col_]
+
+        for i, after_treatment_col_ in enumerate(after_treatment_col):
+            did_formula = did_formula.replace(after_treatment_col_, cols_to_demean_new["after_treatment_col"][after_treatment_col_])
+            after_treatment_col[i] = cols_to_demean_new["after_treatment_col"][after_treatment_col_]
+
+        for i, ATT_col_ in enumerate(ATT_col):
+            did_formula = did_formula.replace(ATT_col_, cols_to_demean_new["ATT_col"][ATT_col_])
+            ATT_col[i] = cols_to_demean_new["ATT_col"][ATT_col_]
+
+        indep_vars_no = indep_vars_no-(len(FE_unit_vars)+len(FE_time_vars))
+            
+        if verbose:
+            print("OK")
+        
+        print(f"NOTE: Outcome variable '{outcome_col}' is replaced by demeaned variable '{outcome_col_demeaned}', and {len(treatment_col)+len(covariates)+len(spillover_vars)+len(interactions)} other variables were remeaned.")
+        
+        outcome_col = outcome_col_demeaned    
         
     did_formula = did_formula[:-1] if did_formula.endswith(" ") else did_formula
     did_formula = did_formula[:-1] if did_formula.endswith("+") else did_formula
@@ -2752,7 +2853,7 @@ def did_analysis(
             
     analysis_description = config.DID_DESCRIPTION
     if placebo:
-        analysis_description = f"Placebo {config.DID_DESCRIPTION}"
+        analysis_description = f"{config.PLACEBO_DESCRIPTION} {config.DID_DESCRIPTION}"
 
     model_config = {
         "TG_col": TG_col,
@@ -2770,6 +2871,8 @@ def did_analysis(
         "FE_unit": FE_unit,
         "FE_time": FE_time,
         "FE_group": FE_group,
+        "demean": demean,
+        "cols_to_demean_new": cols_to_demean_new,
         "cluster_SE_by": cluster_SE_by,
         "intercept": intercept,
         "ITT": ITT,
@@ -3108,7 +3211,7 @@ def ddd_analysis(
     analysis_description = config.DDD_DESCRIPTION
     
     if placebo:
-        analysis_description = f"Placebo {config.DDD_DESCRIPTION}"
+        analysis_description = f"{config.PLACEBO_DESCRIPTION} {config.DDD_DESCRIPTION}"
 
     model_config = {
         "TG_col": TG_col,
@@ -3127,6 +3230,8 @@ def ddd_analysis(
         "FE_unit": FE_unit,
         "FE_time": FE_time,
         "FE_group": None,
+        "demean": False,
+        "cols_to_demean_new": None,
         "cluster_SE_by": None,
         "intercept": True,
         "ITT": False,

@@ -4,15 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.16
-# Last update: 2026-04-21 20:19
+# Version:     1.0.18
+# Last update: 2026-05-01 09:53
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 # Basic config:
 
 PACKAGE_NAME = "diffindiff"
-PACKAGE_VERSION = "2.3.8"
+PACKAGE_VERSION = "2.4.0"
 
 VERBOSE = False
 
@@ -25,8 +25,13 @@ ACCEPT_CONTINUOUS_TREATMENTS = True
 
 # Description texts:
 
-DID_DESCRIPTION = "Difference-in-Differences Analysis"
-DDD_DESCRIPTION = "Triple-Difference Analysis"
+DID = "Difference-in-Differences"
+DDD = "Triple-Difference"
+
+DID_DESCRIPTION = f"{DID} Analysis"
+DDD_DESCRIPTION = f"{DDD} Analysis"
+PLACEBO_DESCRIPTION = "Placebo"
+PREDICTIVE_MODEL_DESCRIPTION = "Predictive Model"
 
 TREATMENT_DESCRIPTION = "Treatment"
 CONTROL_DESCRIPTION = "Control"
@@ -90,6 +95,7 @@ DUMMY_PREFIX = "DUMMY"
 LOG_PREFIX = "log"
 OBSERVED_SUFFIX = "observed"
 EXPECTED_SUFFIX = "expected"
+DEMEAN_SUFFIX = "demean"
 PREDICTED_SUFFIX = "pred"
 CI_LOWER_SUFFIX = "CI_lower"
 CI_UPPER_SUFFIX = "CI_upper"
@@ -98,54 +104,63 @@ PI_UPPER_SUFFIX = "PI_upper"
 SPILLOVER_PREFIX = "Spillover"
 SPILLOVER_UNIT_PREFIX = f"{SPILLOVER_PREFIX}{DELIMITER}{UNIT_COL}"
 DIFFERENCE_SUFFIX = "diff"
+RESIDUALS_SUFFIX = "resid"
+PLACEBO_PREFIX = "Placebo"
 
 # Modeling config:
 
 # Coefficients/effects types:
 
-TREATMENT_EFFECTS_DESCRIPTION = "Difference-in-Differences coefficients"
+TREATMENT_EFFECTS_DESCRIPTION = f"{DID} coefficients"
 
 EFFECTS_TYPES = {
     "ATE": {
         "description": "Average treatment effect",
         "model_results_key": "average_treatment_effects",
         "summary_treatment_effects": True,
-        "summary_description": "{description} {coef}"
+        "summary_description": "{description} {coef}",
+        "derive_fixed_effects": True
     },
     "AATE": {
         "description": "Average after-treatment effect",
         "model_results_key": "average_after_treatment_effects",
         "summary_treatment_effects": True,
-        "summary_description": "{description} {coef}"
+        "summary_description": "{description} {coef}",
+        "derive_fixed_effects": True
     },    
     "beta_0": {
         "description": "Control group baseline",
         "model_results_key": "control_group_baseline",
         "summary_treatment_effects": True,
-        "summary_description": "{description}"
+        "summary_description": "{description}",
+        "derive_fixed_effects": True
     },
     "beta_1": {
         "description": f"{TREATMENT_GROUP_DESCRIPTION} deviation",
         "model_results_key": "treatment_group_deviation",
         "summary_treatment_effects": True,
-        "summary_description": "{description}"
+        "summary_description": "{description}",
+        "derive_fixed_effects": True
     },
     "delta_0": {
         "description": "Non-treatment time effect",
         "model_results_key": "non_treatment_time_effect",
         "summary_treatment_effects": True,
-        "summary_description": "{description} {coef}"
+        "summary_description": "{description} {coef}",
+        "derive_fixed_effects": True
     },
     "ATT": {
         "description": "After-treatment time effect",
         "model_results_key": "after_treatment_time_effects",
         "summary_treatment_effects": True,
-        "summary_description": "{description} {coef}"
+        "summary_description": "{description} {coef}",
+        "derive_fixed_effects": True
     },
     "FE": {
         "description": "Fixed effects",
         "model_results_key": "fixed_effects",
         "summary_treatment_effects": False,
+        "derive_fixed_effects": False,
         "types": {
             0: {
                 "FE": "unit",
@@ -174,50 +189,57 @@ EFFECTS_TYPES = {
         "description": "Individual time trends",
         "model_results_key": "individual_time_trends",
         "model_config_key": "ITT",
-        "summary_treatment_effects": False
+        "summary_treatment_effects": False,
+        "derive_fixed_effects": False
     },
     "ITE": {
         "description": "Individual treatment effects",
         "model_results_key": "individual_treatment_effects",
         "model_config_key": "ITE",
         "summary_treatment_effects": True,
-        "summary_description": "{coef}"
+        "summary_description": "{coef}",
+        "derive_fixed_effects": False
     },
     "GTT": {
         "description": "Group time trends",
         "model_results_key": "group_time_trends",
         "model_config_key": "GTT",
-        "summary_treatment_effects": False
+        "summary_treatment_effects": False,
+        "derive_fixed_effects": False
     },
     "GTE": {
         "description": "Group treatment effects",
         "model_results_key": "group_treatment_effects",
         "model_config_key": "GTE",
         "summary_treatment_effects": True,
-        "summary_description": "{coef}"
+        "summary_description": "{coef}",
+        "derive_fixed_effects": False
     },
     "spillover": {
         "description": "Treatment spillover effect",
         "model_results_key": "treatment_spillover_effects",
         "model_config_key": "spillover_effects",
         "summary_treatment_effects": True,
-        "summary_description": "{description} {coef}"
+        "summary_description": "{description} {coef}",
+        "derive_fixed_effects": True
     },
     "covariates": {
         "description": "Covariates",
         "model_results_key": "covariates_effects",
         "model_config_key": "covariates",
         "summary_treatment_effects": False,
-        "summary_description": "{coef}"
+        "summary_description": "{coef}",
+        "derive_fixed_effects": True
     }, 
 }
 EFFECTS_TYPES_MODEL_RESULTS = [value["model_results_key"] for value in EFFECTS_TYPES.values() if "model_results_key" in value]
 EFFECTS_TYPES_MODEL_RESULTS_SUMMARY = [value["model_results_key"] for value in EFFECTS_TYPES.values() if "model_results_key" in value and value["summary_treatment_effects"]]
+EFFECTS_TYPES_DERIVE_FE = [value["model_results_key"] for value in EFFECTS_TYPES.values() if "model_results_key" in value and value["derive_fixed_effects"]]
 
 
 EFFECTS_TYPES_DDD = {
     "TDATE": {
-        "description": "Triple-Difference Average treatment effect",
+        "description": f"{DDD} Average treatment effect",
         "model_results_key": "TDATE"
     },
     "beta_2": {
@@ -374,9 +396,12 @@ MODEL_WRAPPER_AVAILABLE = {
     "knn": "K-nearest neighbor",
     "xgb": "Extreme Gradient Boosting",
     "lgbm": "LightGBM",
-    "svr": "Support-vector regression",
+    "svr": "Support-Vector Regression",
+    "mlp": "Multi-layer Perceptron"
 }
 MODEL_WRAPPER_AVAILABLE_LIST = list(MODEL_WRAPPER_AVAILABLE.keys())
+
+MODEL_WRAPPER_DEFAULT = MODEL_WRAPPER_AVAILABLE_LIST[0]
 
 
 # Treatment diagnostics:

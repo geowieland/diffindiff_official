@@ -1,6 +1,6 @@
 # diffindiff: Python library for convenient Difference-in-Differences analyses
 
-This Python library is designed for performing Difference-in-Differences (DiD) analyses in a convenient way. The package is intended to be used in econometric analyses of natural experiments by researchers in economics, marketing, economic geography, and health sciences. It is designed to cover the entire workflow of a DiD analysis, while not requiring extensive programming skills. The package allows users to construct datasets, define treatment and control groups, and set treatment periods. DiD model analyses may be conducted with both datasets created by built-in functions and ready-to-use external datasets. Both simultaneous and staggered adoption are supported. The library allows for various extensions, such as two-way fixed effects models, group- or individual-specific effects, post-treatment periods, and triple-difference estimations. Additionally, it includes functions for visualizing results, such as plotting DiD coefficients with confidence intervals and illustrating the temporal evolution of staggered treatments. Furthermore, several functions for rigorous treatment setting and data diagnostics are incorporated.
+This Python library is designed for performing Difference-in-Differences (DiD) analyses in a convenient way. The package is intended to be used in econometric analyses of natural experiments by researchers in economics, marketing, economic geography, and health sciences. It is designed to cover the entire workflow of a DiD analysis, while not requiring extensive programming skills. The package allows users to construct datasets, define treatment and control groups, and set treatment periods. DiD model analyses may be conducted with both datasets created by built-in functions and ready-to-use external datasets. Both simultaneous and staggered adoption are supported. The library allows for various extensions, such as two-way fixed effects models, group- or individual-specific effects, post-treatment periods, and triple-difference estimations. Additionally, it includes functions for visualizing results, such as plotting DiD coefficients with confidence intervals and illustrating the temporal evolution of staggered treatments. Furthermore, several functions for rigorous treatment configuration and data diagnostics are incorporated.
 
 
 ## Author
@@ -19,7 +19,7 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.3.8) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.4.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -55,6 +55,7 @@ pip install git+https://github.com/geowieland/diffindiff_official.git
     - Including covariates
     - Including after-treatment period
   - Perform Triple Difference (DDD) analysis
+  - Perform DiD analysis with demeaned data
 - **Diagnosis tools and extensions of analyses**:
   - Add own counterfactuals or create counterfactuals based on machine learning or OLS regression models
   - Bonferroni correction for treatment effects
@@ -158,6 +159,7 @@ See the /tests directory for usage examples of most of the included functions.
   - von Bismarck-Osten C, Borusyak K, Schönberg U (2022) The role of schools in transmission of the SARS-CoV-2 virus: quasi-experimental evidence from Germany. *Economic Policy* 37(109): 87–130. [10.1093/epolic/eiac001](https://doi.org/10.1093/epolic/eiac001)
   - Wieland T (2025) Assessing the effectiveness of non-pharmaceutical interventions in the SARS-CoV-2 pandemic: results of a natural experiment regarding Baden-Württemberg (Germany) and Switzerland in the second infection wave. *Journal of Public Health: From Theory to Practice* 33(11): 2497-2511. [10.1007/s10389-024-02218-x](https://doi.org/10.1007/s10389-024-02218-x)
   - Wooldridge JM (2012) *Introductory Econometrics. A Modern Approach*.
+  - Wooldridge JM (2025) Two-way fixed effects, the two-way mundlak regression, and difference-in-differences estimators. *Empirical Economics* 69(5): 2545-2587. [10.1007/s00181-025-02807-z](https://doi.org/10.1007/s00181-025-02807-z)
 
 
 ## AI Usage Statement
@@ -165,7 +167,19 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.3.8)
+## What's new (v2.4.0)
 
+- Extensions:
+  - Option of demeaning numeric variables instead of Two-way fixed effects in did_analysis.didanalysis() and diddata.DiffData.analysis() to save processing time and memory capacity
+  - didtools.model_wrapper() extended by multi-layer perceptron algorithm
 - Bugfixes:
-  - DiffModel.plot() always shows the correct values if retransform_log_outcome is used
+  - Fixed pandas error (relevant only in newer pandas versions) in didtools.is_notreatment()
+  - Exception handling in didtools.model_wrapper() improved: errors during model training are now being caught
+  - didtools.is_numeric() performs a safer check of the specified cols whether they are numeric
+  - Extended variables checks in didtools.fit_metrics()
+  - Fixed name bug in diddata.create_counterfactual()
+  - In didanalysis.DiffModel.summary(), numbers are now always represented in decimal notation
+  - Corrected check in didanalysis.DiffModel.treatment_statistics() whether treatment is included
+  - Cleanup and adjustment of requirements with respect to compatibility
+- Other:
+  - More specific outputs in NOTEs texts

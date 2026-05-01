@@ -7,7 +7,7 @@ def read_README():
     
 setup(
     name='diffindiff',
-    version='2.3.8',
+    version='2.4.0',
     description='diffindiff: Python library for convenient Difference-in-Differences analyses',
     packages=find_packages(where="src"),
     package_dir={"": "src"},
@@ -21,18 +21,15 @@ setup(
         'diffindiff': ['tests/data/*'],
     },
     install_requires=[
-        'numpy',
-        'pandas',
+        'numpy>=1.26.1,<=1.26.4',
+        'pandas>=2.2.2,<3.0',
         'statsmodels==0.14.2',
         'scipy==1.15.3',
         'matplotlib',
-        'datetime',
-        'scikit-learn',
-        'xgboost',
-        'lightgbm',
-        'patsy',
-        'openpyxl',
-        'huff>=1.6.6'
+        'scikit-learn>=1.3,<1.6',
+        'xgboost>=1.7,<2.1',
+        'lightgbm>=4.0,<4.5',
+        'patsy>=0.5.6',
     ],
     test_suite='diffindiff.tests',
 )

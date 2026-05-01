@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.5
-# Last update: 2026-03-24 20:23
+# Version:     2.2.6
+# Last update: 2026-04-30 21:19
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1797,6 +1797,7 @@ class DiffData:
         log_outcome_add: float = 0.01,
         FE_unit: bool = False, 
         FE_time: bool = False,
+        demean: bool = False,
         cluster_SE_by: str = None,
         intercept: bool = True, 
         ITE: bool = False,
@@ -1828,6 +1829,8 @@ class DiffData:
             Include unit fixed effects.
         FE_time : bool, optional
             Include time fixed effects.
+        demean : bool, optional
+            If True, demean outcome and covariates before estimation.
         cluster_SE_by : str, optional
             Column name for clustering standard errors.
         intercept : bool, optional
@@ -1960,6 +1963,7 @@ class DiffData:
                 treatment_col = treatment_col,
                 unit_col = config.UNIT_COL,
                 time_col = config.TIME_COL,
+                demean = demean,
                 outcome_col = outcome_col_original,
                 after_treatment_col = after_treatment_col,
                 ATT_col = ATT_col,
@@ -2311,10 +2315,17 @@ def create_counterfactual(
     svr_kernel = "rbf",
     xgb_learning_rate = 0.1,
     lgbm_learning_rate = 0.1,
+    mlp_max_iter: int = 200,
+    mlp_hidden_layer_sizes: tuple = (100,),
+    mlp_activation: str = "relu",
+    mlp_solver: str = "adam",
+    mlp_alpha: float = 0.0001,
+    mlp_learning_rate: str = "constant",
+    mlp_learning_rate_init: float = 0.001,
     random_state = 71,
     verbose: bool = False
     ):
-    
+   
     """
     Train a predictive model on control/treatment pre-period data to generate counterfactuals.
 
@@ -2398,6 +2409,20 @@ def create_counterfactual(
         Weighting with respect to the contribution of each tree
         in the Light Gradient Boosting algorithm.
         Passed to `LGBMRegressor`; see the corresponding documentation.
+    mlp_max_iter : int, optional
+        Maximum number of iterations for the Multi-layer Perceptron algorithm.
+    mlp_hidden_layer_sizes : tuple, optional
+        The ith element represents the number of neurons in the ith hidden layer.    
+    mlp_activation : str, optional
+        Activation function for the Multi-layer Perceptron algorithm: {"relu", "identity", "logistic", "tanh"}.
+    mlp_solver : str, optional
+        The solver for weight optimization in the Multi-layer Perceptron algorithm: {"lbfgs", "sgd", "adam"}.
+    mlp_alpha: float, optional
+        L2 penalty (regularization term) parameter for the Multi-layer Perceptron algorithm
+    mlp_learning_rate : str, optional
+        Learning rate schedule for weight updates in the Multi-layer Perceptron algorithm: {"constant", "invscaling", "adaptive"}.
+    mlp_learning_rate_init: float, optional
+        Initial learning rate for weight updates in the Multi-layer Perceptron algorithm.
     random_state : int, optional
         Random seed for reproducibility.
         Passed to `sklearn.model_selection.train_test_split`
@@ -2428,28 +2453,30 @@ def create_counterfactual(
             if len(y) == 1:
                 y = y[0]
             elif len(y) == 0:
-                raise ValueError("Parameter y was stated as empty list")
+                raise ValueError("Parameter 'y' was stated as empty list")
             else:
-                raise ValueError(f"Parameter y was stated as list with {len(y)} entries")
+                raise ValueError(f"Parameter 'y' was stated as list with {len(y)} entries")
         else:
-            raise TypeError(f"Parameter y must be stated as str, not: {y}")
+            raise TypeError(f"Parameter 'y' must be stated as str, not: {y}")
         
     if not isinstance(X, list):
-        if isintance(X, str):
+        if isinstance(X, str):
             X = [X]
         else:
-            raise TypeError(f"Parameter X must be stated as list of strings, not: {X}")
+            raise TypeError(f"Parameter 'X' must be stated as list of strings, not: {X}")
     
     cols = [
         unit_col, 
         time_col,
-        y
+        y,
+        treatment_col
         ]
-    cols.extend(X)
     
     if use_treatment_col:
-        cols.append(treatment_col)
-            
+        X.append(treatment_col)
+        
+    cols.extend(X)
+    
     data = data[cols].copy()
     
     data_len = len(data)
@@ -2540,6 +2567,13 @@ def create_counterfactual(
         svr_kernel = svr_kernel,
         xgb_learning_rate = xgb_learning_rate,
         lgbm_learning_rate = lgbm_learning_rate,
+        mlp_max_iter = mlp_max_iter,
+        mlp_hidden_layer_sizes = mlp_hidden_layer_sizes,
+        mlp_activation = mlp_activation,
+        mlp_solver = mlp_solver,
+        mlp_alpha = mlp_alpha,
+        mlp_learning_rate = mlp_learning_rate,
+        mlp_learning_rate_init = mlp_learning_rate_init,
         random_state = random_state,
         verbose = verbose
         )
