@@ -14,12 +14,14 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 - 💻 GitHub Repository: [diffindiff_official](https://github.com/geowieland/diffindiff_official)
 - 📄 DOI (Zenodo): [10.5281/zenodo.18656820](https://doi.org/10.5281/zenodo.18656820)
 
+A research note featuring a case study that utilizes the diffindiff library is available on [arXiv](https://arxiv.org/abs/2605.21464).
+
 
 ## Citation
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.4.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.4.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -167,19 +169,7 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.4.0)
+## What's new (v2.4.1)
 
-- Extensions:
-  - Option of demeaning numeric variables instead of Two-way fixed effects in did_analysis.didanalysis() and diddata.DiffData.analysis() to save processing time and memory capacity
-  - didtools.model_wrapper() extended by multi-layer perceptron algorithm
-- Bugfixes:
-  - Fixed pandas error (relevant only in newer pandas versions) in didtools.is_notreatment()
-  - Exception handling in didtools.model_wrapper() improved: errors during model training are now being caught
-  - didtools.is_numeric() performs a safer check of the specified cols whether they are numeric
-  - Extended variables checks in didtools.fit_metrics()
-  - Fixed name bug in diddata.create_counterfactual()
-  - In didanalysis.DiffModel.summary(), numbers are now always represented in decimal notation
-  - Corrected check in didanalysis.DiffModel.treatment_statistics() whether treatment is included
-  - Cleanup and adjustment of requirements with respect to compatibility
 - Other:
-  - More specific outputs in NOTEs texts
+  - Extension of documentation
