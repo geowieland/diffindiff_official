@@ -21,7 +21,7 @@ A research note featuring a case study that utilizes the diffindiff library is a
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.4.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.4.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -169,7 +169,7 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.4.1)
+## What's new (v2.4.2)
 
-- Other:
-  - Extension of documentation
+- Bugfixes:
+  - DiffData.add_own_counterfactual() now works correctly in any case

@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.2.0
-# Last update: 2025-05-01 09:28
+# Version:     1.2.1
+# Last update: 2025-06 28 13:03
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1547,16 +1547,19 @@ def extract_model_results(
         covariates_effects = {}
         
         for i, covariate in enumerate(covariates):
-            covariates_effects[i] = {
-                config.OLS_MODEL_RESULTS["coef_name"]["model_results_key"]: covariate,
-                config.OLS_MODEL_RESULTS["coef"]["model_results_key"]: coefficients[covariate],
-                "SE": float(coef_standarderrors[covariate]),
-                "t": float(coef_t[covariate]),
-                "p": float(coef_p[covariate]),
-                "CI_lower": float(coef_conf_intervals.loc[covariate, 0]),
-                "CI_upper": float(coef_conf_intervals.loc[covariate, 1]),
-                }
-            
+
+            if covariate in coefficients:
+
+                covariates_effects[i] = {
+                    config.OLS_MODEL_RESULTS["coef_name"]["model_results_key"]: covariate,
+                    config.OLS_MODEL_RESULTS["coef"]["model_results_key"]: coefficients[covariate],
+                    "SE": float(coef_standarderrors[covariate]),
+                    "t": float(coef_t[covariate]),
+                    "p": float(coef_p[covariate]),
+                    "CI_lower": float(coef_conf_intervals.loc[covariate, 0]),
+                    "CI_upper": float(coef_conf_intervals.loc[covariate, 1]),
+                    }
+                
         model_results["covariates_effects"] = covariates_effects    
 
     if (len(TG_x_BG_x_TT_col) > 0) and (any(col in coefficients for col in TG_x_BG_x_TT_col)):

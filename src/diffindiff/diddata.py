@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.6
-# Last update: 2026-04-30 21:19
+# Version:     2.2.7
+# Last update: 2026-06-28 13:18
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1647,39 +1647,64 @@ class DiffData:
         if time_col is None or counterfactual_outcome_col is None:
             raise ValueError("Parameters 'time_col' and 'counterfactual_outcome_col' must be stated")
         
+        necessary_cols = [time_col, counterfactual_outcome_col]
+        covariates = self.data[5]
+        if len(covariates) > 0:
+            necessary_cols.extend(covariates)
+
         tools.check_columns(
             df = additional_df,
-            columns = [counterfactual_outcome_col, time_col]
+            columns = necessary_cols
             )
+
+        if verbose:
+            print("Collecting treatment information", end = " ... ")
 
         did_modeldata = self.data[0]
-        groups_data = self.data[1].get_data()
+
+        treatment_cols = self.get_treatment_cols()
+        TG_col = treatment_cols[0]["TG_col"]
+        TT_col = treatment_cols[0]["TT_col"]
+        treatment_name = treatment_cols[0]["treatment_name"]
+
+        groups_data = self.data[1].get_data()        
         groups_config = self.data[1].get_config()
-        treatment_group = groups_data.loc[groups_data[config.TG_COL] == 1, config.UNIT_COL].values
-        treatment_config = self.data[2].get_config()        
+        
+        treatment_group = did_modeldata.loc[did_modeldata[TG_col] == 1, config.UNIT_COL].values
+        
+        treatment_config = self.data[2].get_config()
+                
         outcome_col_original = self.data[3]        
+        
         treatment_data = self.data[2].get_data()
 
-        additional_df = additional_df[[time_col, counterfactual_outcome_col]].copy()
+        additional_df = additional_df[necessary_cols].copy()
         
-        did_modeldata_TG = did_modeldata[did_modeldata[config.UNIT_COL].astype(str).isin(treatment_group)].copy()        
+        did_modeldata_TG = did_modeldata[did_modeldata[config.UNIT_COL].astype(str).isin(treatment_group)].copy()
+        
+        if verbose:
+            print("OK")
+            print("Compiling and merging counterfactual data", end = " ... ")
         
         did_modeldata_counterfac = pd.DataFrame(columns=did_modeldata_TG.columns, index=range(len(treatment_data)))
-        did_modeldata_counterfac[config.UNIT_COL] = counterfactual_UID
-        did_modeldata_counterfac[config.TG_COL] = 0
-        did_modeldata_counterfac[config.TIME_COL] = treatment_data[config.TIME_COL].values
-        did_modeldata_counterfac[config.TIME_COUNTER_COL] = treatment_data[config.TIME_COUNTER_COL].values
-        did_modeldata_counterfac[config.TT_COL] = treatment_data[config.TT_COL].values
-        did_modeldata_counterfac[config.TREATMENT_COL] = did_modeldata_counterfac[config.TG_COL] * did_modeldata_counterfac[config.TT_COL]
 
-        did_modeldata_counterfac = tools.panel_index(
-            data=did_modeldata_counterfac,
-            unit_col=config.UNIT_COL,
-            time_col=config.TIME_COL,
-            verbose=verbose
-            )
+        did_modeldata_counterfac[config.UNIT_COL] = counterfactual_UID
+        did_modeldata_counterfac[config.UNIT_COL] = did_modeldata_counterfac[config.UNIT_COL].astype(str)
         
-        if treatment_config["after_treatment_period"]:
+        did_modeldata_counterfac[TG_col] = 0
+        
+        did_modeldata_counterfac[config.TIME_COL] = treatment_data[config.TIME_COL].values
+        did_modeldata_counterfac[config.TIME_COL] = did_modeldata_counterfac[config.TIME_COL].astype(str)
+        
+        did_modeldata_counterfac[config.TIME_COUNTER_COL] = treatment_data[config.TIME_COUNTER_COL].values
+        
+        did_modeldata_counterfac[TT_col] = treatment_data[TT_col].values
+        
+        did_modeldata_counterfac[treatment_name] = did_modeldata_counterfac[TG_col] * did_modeldata_counterfac[TT_col]        
+        
+        did_modeldata_counterfac[config.UNIT_TIME_COL] = did_modeldata_counterfac[config.UNIT_COL]+config.DELIMITER+did_modeldata_counterfac[config.TIME_COL]
+
+        if treatment_config[0]["after_treatment_period"]:
             did_modeldata_counterfac["ATT"] = treatment_data["ATT"].values
 
         if counterfactual_outcome_col == outcome_col_original:
@@ -1695,16 +1720,24 @@ class DiffData:
             )
 
         did_modeldata_counterfac[outcome_col_original] = did_modeldata_counterfac[counterfactual_outcome_col]        
-        did_modeldata_counterfac = did_modeldata_counterfac.drop(counterfactual_outcome_col, axis = 1) 
+        did_modeldata_counterfac = did_modeldata_counterfac.drop(counterfactual_outcome_col, axis = 1)
+        
+        if time_col in did_modeldata_counterfac.columns and time_col != config.TIME_COL:
+            did_modeldata_counterfac = did_modeldata_counterfac.drop(time_col, axis = 1)
 
         did_modeldata_TG_with_counterfac = pd.concat(
-            [did_modeldata_TG, did_modeldata_counterfac], 
+            [
+                did_modeldata_TG, 
+                did_modeldata_counterfac
+                ], 
             ignore_index=True
             )       
      
-        groups_config["counterfactual"] = True
-        
-        groups_data = groups_data[groups_data[config.TG_COL] == 1]
+        groups_config[0]["own_counterfactual"] = True
+        groups_config[0]["control_group"] = 1
+        groups_config[0]["full_sample"] = 2
+       
+        groups_data = groups_data[0][groups_data[0][TG_col] == 1]
         groups_data_cf = {
             config.UNIT_COL: counterfactual_UID, 
             config.TG_COL: 0
@@ -1719,6 +1752,9 @@ class DiffData:
         
         self.data[0] = did_modeldata_TG_with_counterfac
         self.data[1] = groups
+
+        if verbose:
+            print("OK")
         
         return self
 
