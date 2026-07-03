@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.0
-# Last update: 2026-05-01 09:52
+# Version:     2.4.1
+# Last update: 2026-07-02 20:17
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -735,16 +735,20 @@ class DiffModel:
         treatment_effects_df = self.treatment_effects()        
         
         width = treatment_effects_df[""].str.len().max()
-        treatment_effects_df[""] = treatment_effects_df[""].str.ljust(width)
-        total_width = (sum(treatment_effects_df.astype(str).map(len).max()) + len(treatment_effects_df.columns) * 2)
+        treatment_effects_df[""] = treatment_effects_df[""].str.ljust(width)        
         
-        print("=" * total_width)
+        total_width = (
+            treatment_effects_df.apply(lambda col: col.astype(str).str.len().max()).sum()
+            + len(treatment_effects_df.columns) * 2
+        )
+        
+        print("=" * int(total_width))
         print(model_config["analysis_description"]) 
-        print("-" * total_width)
+        print("-" * int(total_width))
 
         print(config.TREATMENT_EFFECTS_DESCRIPTION)
         print(treatment_effects_df.to_string(index=False))        
-        print("-" * total_width)
+        print("-" * int(total_width))
 
         covariates_effects_df = pd.DataFrame(
             [
@@ -761,7 +765,7 @@ class DiffModel:
         covariates_effects_df[config.COVARIATES_DESCRIPTION] = covariates_effects_df[config.COVARIATES_DESCRIPTION].str.ljust(width)
 
         print(covariates_effects_df.to_string(index=False, header=False))
-        print("-" * total_width)        
+        print("-" * int(total_width))        
 
         treatment_diagnostics = self.treatment_diagnostics()
         treatment_diagnostics_df = treatment_diagnostics[0]
@@ -782,7 +786,7 @@ class DiffModel:
             else:
                 print(f"NOTE: Treatments {', '.join(no_control_conditions)} have no control conditions.")  
 
-        print("-" * total_width)        
+        print("-" * int(total_width))        
 
         data_diagnostics_df = self.data_diagnostics()
 
@@ -792,7 +796,7 @@ class DiffModel:
         print(config.DATA_DIAGNOSTICS_DESCRIPTION)
         print(data_diagnostics_df.to_string(index=False, header=False))
 
-        print("-" * total_width)        
+        print("-" * int(total_width))        
 
         model_fit_metrics = self.fit_metrics()
 
@@ -804,7 +808,7 @@ class DiffModel:
         print(f"{config.MODEL_FIT_METRICS_DESCRIPTION}s")
         print(model_fit_metrics.to_string(index=False, header=False))
         
-        print("=" * total_width)
+        print("=" * int(total_width))
 
         return self
 
@@ -2389,16 +2393,37 @@ def did_analysis(
         verbose=verbose
     )
     treatment_diagnostics = treatment_diagnostics_results[0]
-    staggered_adoption = treatment_diagnostics_results[1]    
+    staggered_adoption = treatment_diagnostics_results[1]
+    unique_units = treatment_diagnostics_results[3]
+    unique_time_points = treatment_diagnostics_results[4]
     
     if no_treatments > 1:        
         
         intercept = False
         TG_col = []        
         
-        if not FE_unit:
+        if not FE_unit and config.AUTO_SWITCH_TO_FIXED_EFFECTS:
             FE_unit = True
-            print("NOTE: Quasi-experiment includes more than one treatment. Unit fixed effects are used instead of control group baseline and treatment group deviation.")
+            print(f"NOTE: Quasi-experiment includes more than one treatment ({no_treatments}). Unit fixed effects are used instead of control group baseline and treatment group deviation.")
+    
+    if unique_units < config.FIXED_EFFECTS_THRESHOLD:
+        
+        FE_unit = False
+        FE_group = False
+        ITE = False
+        ITT = False
+        intercept = True
+        
+        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} units. Unit or group fixed effects are skipped.")
+        
+    if unique_time_points < config.FIXED_EFFECTS_THRESHOLD:
+        
+        FE_time = False
+        ITT = False
+        GTT = False
+        intercept = True
+        
+        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} time points. Time fixed effects are skipped.")
     
     if demean and FE_unit:
         
@@ -2435,7 +2460,7 @@ def did_analysis(
             GTT = False
             print("NOTE: Both group and individual time trends were stated. Switching to individual time trends only.")
             
-    if staggered_adoption:
+    if staggered_adoption and config.AUTO_SWITCH_TO_FIXED_EFFECTS:
         
         if not FE_unit or not FE_time:
             print("NOTE: Quasi-experiment includes one or more staggered treatments. Two-way fixed effects model is used.")
@@ -2562,7 +2587,15 @@ def did_analysis(
         missing_replace_by_zero = missing_replace_by_zero,
         verbose = verbose
     )
+    
+    if len(data_diagnostics["cols_constants"]) > 0:
         
+        if config.AUTO_SKIP_CONSTANT_COLUMNS:
+        
+            print(f"NOTE: The following columns are constant and dropped from the analysis: {', '.join(data_diagnostics['cols_constants'])}.")
+            
+            covariates = [col for col in covariates if col not in data_diagnostics["cols_constants"]]
+
     if data_diagnostics["is_prepost"] and config.AUTO_SWITCH_TO_PREPOST:
         
         print(f"NOTE: Input is {config.PREPOST_PANELDATA_DESCRIPTION}. Data processing and model estimation will treat data as pre-post.")
@@ -3115,7 +3148,21 @@ def ddd_analysis(
         verbose=verbose
     )
     treatment_diagnostics = treatment_diagnostics_results[0]
-               
+    unique_units = treatment_diagnostics_results[3]
+    unique_time_points = treatment_diagnostics_results[4]
+
+    if unique_units < config.FIXED_EFFECTS_THRESHOLD:
+        
+        FE_unit = False
+          
+        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} units. Unit fixed effects are skipped.")
+        
+    if unique_time_points < config.FIXED_EFFECTS_THRESHOLD:
+        
+        FE_time = False
+        
+        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} time points. Time fixed effects are skipped.")
+                
     if FE_unit:
         TG_col = None
     if FE_time:
@@ -3140,7 +3187,15 @@ def ddd_analysis(
         missing_replace_by_zero = missing_replace_by_zero,
         verbose = verbose
     )
-      
+    
+    if len(data_diagnostics["cols_constants"]) > 0:
+        
+        if config.AUTO_SKIP_CONSTANT_COLUMNS:
+            
+            print(f"NOTE: The following columns are constant and dropped from the analysis: {', '.join(data_diagnostics['cols_constants'])}.")
+            
+            covariates = [col for col in covariates if col not in data_diagnostics["cols_constants"]]
+    
     if data_diagnostics["is_prepost"] and config.AUTO_SWITCH_TO_PREPOST:
         
         print("NOTE: Panel data is pre-post. Data processing and model estimation will treat data as pre-post")

@@ -4,14 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.7
-# Last update: 2026-06-28 13:18
+# Version:     2.3.0
+# Last update: 2026-07-03 18:00
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 
 import pandas as pd
 import numpy as np
+from scipy.optimize import minimize
 from datetime import datetime, timedelta
 import diffindiff.didanalysis as didanalysis
 import diffindiff.didtools as tools
@@ -362,8 +363,8 @@ class DiffTreatment:
 
         Parameters
         ----------
-        treatment_data_df : pandas.DataFrame
-            Data frame describing treatment timing (TT/ATT).
+        treatment_data_df : list
+            List with data frames describing treatment timing (TT/ATT).
         treatment_config_dict : dict
             Configuration dictionary for the treatment.
         treatment_meta : dict
@@ -375,7 +376,6 @@ class DiffTreatment:
         -------
         None
             Constructor does not return a value; instance is initialized in-place.
-
         """
 
         self.data = [
@@ -542,7 +542,6 @@ def create_treatment(
     ): 
        
     """
-
     Create a DiffTreatment object describing treatment timepoints.
 
     Parameters
@@ -647,7 +646,10 @@ def create_treatment(
             study_period_range
             )
 
-        treatment_data = treatment_period_range.merge(TT_data, how = "left")
+        treatment_data_df = treatment_period_range.merge(
+            TT_data, 
+            how = "left"
+            )
 
     else:
 
@@ -680,12 +682,12 @@ def create_treatment(
             }
         TT_data = pd.DataFrame(TT_data)
     
-        treatment_data = study_period_range.merge(
+        treatment_data_df = study_period_range.merge(
             TT_data, 
             how = "left"
             )
 
-    treatment_data[TT_col] = treatment_data[TT_col].fillna(0)
+    treatment_data_df[TT_col] = treatment_data_df[TT_col].fillna(0)
 
     if after_treatment_period:
         
@@ -710,16 +712,19 @@ def create_treatment(
             }
         ATT_data = pd.DataFrame(ATT_data)
 
-        after_treatment_data = study_period_range.merge(ATT_data, how = "left")
-        after_treatment_data[ATT_col] = after_treatment_data[ATT_col].fillna(0)
-        after_treatment_data = after_treatment_data.drop(columns=[config.TIME_COL, config.TIME_COUNTER_COL])
+        after_treatment_data_df = study_period_range.merge(ATT_data, how = "left")
+        after_treatment_data_df[ATT_col] = after_treatment_data_df[ATT_col].fillna(0)
+        after_treatment_data_df = after_treatment_data_df.drop(columns=[config.TIME_COL, config.TIME_COUNTER_COL])
 
-        treatment_data = pd.concat([treatment_data, after_treatment_data], axis=1)
+        treatment_data_df = pd.concat([treatment_data_df, after_treatment_data_df], axis=1)
 
     else:
         after_treatment_period_N = 0
     
     no_treatments = 1
+
+    treatment_data = [0] * no_treatments
+    treatment_data[0] = treatment_data_df
 
     treatment_meta = {
         "no_treatments": 1,
@@ -732,19 +737,18 @@ def create_treatment(
         }
 
     treatment_config = {
-        0:
-            {
-                "treatment_name": treatment_name,
-                "treatment_period_start": treatment_period[0],
-                "treatment_period_end": treatment_period[1],
-                "treatment_period": treatment_period_N,
-                "after_treatment_period": after_treatment_period,
-                "after_treatment_period_N": after_treatment_period_N,
-                "no_treatments": no_treatments,
-                "TT_col": TT_col,
-                "ATT_col": ATT_col,
-                }
+        0: {
+            "treatment_name": treatment_name,
+            "treatment_period_start": treatment_period[0],
+            "treatment_period_end": treatment_period[1],
+            "treatment_period": treatment_period_N,
+            "after_treatment_period": after_treatment_period,
+            "after_treatment_period_N": after_treatment_period_N,
+            "no_treatments": no_treatments,
+            "TT_col": TT_col,
+            "ATT_col": ATT_col,
             }
+        }
 
     treatment = DiffTreatment(
         treatment_data, 
@@ -1249,6 +1253,7 @@ class DiffData:
         did_treatment_old = self.get_did_treatment()
         treatment_config_old = did_treatment_old.get_config()
         treatment_meta_old = did_treatment_old.get_metadata()
+        treatment_data_old = did_treatment_old.get_data()
         if treatment_meta_old["pre_post"]:
             raise ValueError ("Adding treatments in a pre-post design is currently not possible.")
         no_treatments_old = treatment_meta_old["no_treatments"]
@@ -1288,7 +1293,8 @@ class DiffData:
             after_treatment_period = after_treatment_period,
             verbose=False
             )
-        new_treatment_data_df = new_treatment.get_data()
+        new_treatment_data = new_treatment.get_data()
+        new_treatment_data_df = new_treatment_data[0]
         
         new_treatment_config = new_treatment.get_config()        
         TT_col = new_treatment_config[0]["TT_col"]
@@ -1336,7 +1342,8 @@ class DiffData:
         
         treatment_cols_new[key_counter] = {
             "TT_col": TT_col, 
-            "ATT_col": ATT_col, 
+            "ATT_col": ATT_col,
+            "TG_col": TG_col,
             "treatment_name": treatment_name, 
             "after_treatment_name": after_treatment_name                
             }
@@ -1355,9 +1362,12 @@ class DiffData:
         treatment_meta_new["no_treatments"] = no_treatments
         treatment_config_new = treatment_config_old
         treatment_config_new[key_counter] = new_treatment_config[0]
+
+        treatment_data_new = treatment_data_old.copy()
+        treatment_data_new.append(new_treatment_data_df)
         
         treatment_new = DiffTreatment(
-            new_treatment_data_df, 
+            treatment_data_new, 
             treatment_config_new,
             treatment_meta_new,
             timestamp = helper.create_timestamp(function="add_treatment")
@@ -1648,80 +1658,79 @@ class DiffData:
             raise ValueError("Parameters 'time_col' and 'counterfactual_outcome_col' must be stated")
         
         necessary_cols = [time_col, counterfactual_outcome_col]
-        covariates = self.data[5]
+        covariates = self.data[5].copy()
         if len(covariates) > 0:
             necessary_cols.extend(covariates)
 
         tools.check_columns(
             df = additional_df,
-            columns = necessary_cols
+            columns = necessary_cols,
+            verbose = verbose
             )
+        
+        additional_df = additional_df[necessary_cols].copy()
 
-        if verbose:
-            print("Collecting treatment information", end = " ... ")
+        did_modeldata = self.data[0].copy()
 
-        did_modeldata = self.data[0]
-
-        treatment_cols = self.get_treatment_cols()
+        treatment_cols = self.get_treatment_cols().copy()
         TG_col = treatment_cols[0]["TG_col"]
         TT_col = treatment_cols[0]["TT_col"]
         treatment_name = treatment_cols[0]["treatment_name"]
 
-        groups_data = self.data[1].get_data()        
-        groups_config = self.data[1].get_config()
+        if len(treatment_cols) > 1:
+            print(f"NOTE: Treatment data contains {len(treatment_cols)} treatments. Taking first treatment '{treatment_name}' for identifying treatment group and time.")
         
-        treatment_group = did_modeldata.loc[did_modeldata[TG_col] == 1, config.UNIT_COL].values
-        
-        treatment_config = self.data[2].get_config()
-                
-        outcome_col_original = self.data[3]        
-        
-        treatment_data = self.data[2].get_data()
+        if verbose:
+            print("Collecting treatment information", end = " ... ")
 
-        additional_df = additional_df[necessary_cols].copy()
+        groups_data = self.data[1].get_data().copy()        
+        groups_config = self.data[1].get_config().copy()
+
+        treatment_data = self.data[2].get_data().copy()
+        treatment_data_df = treatment_data[0]
+        treatment_config = self.data[2].get_config().copy()
         
+        treatment_group = (did_modeldata.loc[did_modeldata[TG_col] == 1, config.UNIT_COL].astype(str).unique()).tolist()
         did_modeldata_TG = did_modeldata[did_modeldata[config.UNIT_COL].astype(str).isin(treatment_group)].copy()
+
+        outcome_col_original = self.data[3]
         
         if verbose:
             print("OK")
             print("Compiling and merging counterfactual data", end = " ... ")
         
-        did_modeldata_counterfac = pd.DataFrame(columns=did_modeldata_TG.columns, index=range(len(treatment_data)))
+        did_modeldata_counterfac = pd.DataFrame(columns=did_modeldata_TG.columns, index=range(len(treatment_data_df)))
 
         did_modeldata_counterfac[config.UNIT_COL] = counterfactual_UID
         did_modeldata_counterfac[config.UNIT_COL] = did_modeldata_counterfac[config.UNIT_COL].astype(str)
         
         did_modeldata_counterfac[TG_col] = 0
         
-        did_modeldata_counterfac[config.TIME_COL] = treatment_data[config.TIME_COL].values
+        did_modeldata_counterfac[config.TIME_COL] = treatment_data_df[config.TIME_COL].values
         did_modeldata_counterfac[config.TIME_COL] = did_modeldata_counterfac[config.TIME_COL].astype(str)
         
-        did_modeldata_counterfac[config.TIME_COUNTER_COL] = treatment_data[config.TIME_COUNTER_COL].values
+        did_modeldata_counterfac[config.TIME_COUNTER_COL] = treatment_data_df[config.TIME_COUNTER_COL].values
         
-        did_modeldata_counterfac[TT_col] = treatment_data[TT_col].values
-        
-        did_modeldata_counterfac[treatment_name] = did_modeldata_counterfac[TG_col] * did_modeldata_counterfac[TT_col]        
-        
+        for treatment_col_key, treatment_col_data in treatment_cols.items():
+            did_modeldata_counterfac[treatment_cols[treatment_col_key]["treatment_name"]] = 0
+            if treatment_col_data["TG_col"] in did_modeldata_counterfac.columns:
+                did_modeldata_counterfac[treatment_col_data["TG_col"]] = 0
+            if treatment_col_data["TT_col"] in did_modeldata_counterfac.columns:
+                did_modeldata_counterfac[treatment_col_data["TT_col"]] = treatment_data_df[TT_col].values
+                    
         did_modeldata_counterfac[config.UNIT_TIME_COL] = did_modeldata_counterfac[config.UNIT_COL]+config.DELIMITER+did_modeldata_counterfac[config.TIME_COL]
 
         if treatment_config[0]["after_treatment_period"]:
-            did_modeldata_counterfac["ATT"] = treatment_data["ATT"].values
+            did_modeldata_counterfac["ATT"] = treatment_data_df["ATT"].values
 
         if counterfactual_outcome_col == outcome_col_original:
             additional_df = additional_df.rename(columns={counterfactual_outcome_col: counterfactual_outcome_col+"_cf"})
             counterfactual_outcome_col = counterfactual_outcome_col+"_cf"
         
-        did_modeldata_counterfac = pd.merge(
-            did_modeldata_counterfac,
-            additional_df,
-            left_on = config.TIME_COL,
-            right_on = time_col,
-            how = "left"
-            )
-
-        did_modeldata_counterfac[outcome_col_original] = did_modeldata_counterfac[counterfactual_outcome_col]        
-        did_modeldata_counterfac = did_modeldata_counterfac.drop(counterfactual_outcome_col, axis = 1)
-        
+        did_modeldata_counterfac[outcome_col_original] = additional_df[counterfactual_outcome_col]        
+        for covariate in covariates:
+            did_modeldata_counterfac[covariate] = additional_df[covariate]
+       
         if time_col in did_modeldata_counterfac.columns and time_col != config.TIME_COL:
             did_modeldata_counterfac = did_modeldata_counterfac.drop(time_col, axis = 1)
 
@@ -1732,21 +1741,25 @@ class DiffData:
                 ], 
             ignore_index=True
             )       
+    
+        groups_config_new = groups_config.copy()
+        for groups_key in groups_config.keys():
      
-        groups_config[0]["own_counterfactual"] = True
-        groups_config[0]["control_group"] = 1
-        groups_config[0]["full_sample"] = 2
-       
-        groups_data = groups_data[0][groups_data[0][TG_col] == 1]
-        groups_data_cf = {
-            config.UNIT_COL: counterfactual_UID, 
-            config.TG_COL: 0
-            }
-        groups_data = pd.concat([groups_data, pd.DataFrame([groups_data_cf])], ignore_index=True)
+            groups_config_new[groups_key]["own_counterfactual"] = True
+            groups_config_new[groups_key]["treatment_group"] = len(treatment_group)
+            groups_config_new[groups_key]["control_group"] = 1
+            groups_config_new[groups_key]["full_sample"] = len(treatment_group)+1
+
+        groups_data_new = groups_data.copy()
         
+        for groups_key, entry in enumerate(groups_data_new):
+
+            groups_data_new[groups_key] = groups_data[groups_key][groups_data[groups_key].iloc[:, 1] == 1].copy()
+            groups_data_new[groups_key].loc[len(groups_data_new[groups_key])] = [counterfactual_UID, 0]
+
         groups = DiffGroups(
-            groups_data, 
-            groups_config,
+            groups_data = groups_data_new, 
+            groups_config_dict = groups_config_new,
             timestamp = helper.create_timestamp(function="add_own_counterfactual")
             )
         
@@ -1756,8 +1769,230 @@ class DiffData:
         if verbose:
             print("OK")
         
+        print("NOTE: DiffData object was changed with counterfactual.")
+
         return self
 
+    def add_synthetic(
+        self,
+        process_unit: str = None,
+        SCU_UID: str = "synthetic_control",
+        log_outcome: bool = False,
+        log_outcome_add = 0.01,
+        verbose: bool = False
+        ):
+
+        """
+        Create a synthetic control unit (SCU) and add it as a counterfactual.
+
+        Parameters
+        ----------
+        process_unit : str, optional
+            Identifier of the treatment unit for which the synthetic control unit must be created.
+        SCU_UID : str, optional
+            Identifier assigned to the synthetic control unit in the counterfactual data.
+        log_outcome : bool, optional
+            If True, transform the outcome by natural logarithm before fitting the synthetic control weights.
+        log_outcome_add : float, optional
+            Constant added before applying the natural logarithm when log_outcome is True.
+        verbose : bool, optional
+            If True, print progress messages.
+
+        Returns
+        -------
+        DiffData
+            The updated DiffData object including the synthetic control unit as counterfactual.
+
+        Raises
+        ------
+        ValueError
+            If the treatment group contains multiple analysis units and no process unit is specified, if the specified process unit is not part of the model data, or if the control group contains fewer than two units.
+
+        Examples
+        --------
+        >>> curfew_data_prepost = create_data(
+        ...     outcome_data=curfew_DE,
+        ...     unit_id_col="county",
+        ...     time_col="infection_date",
+        ...     outcome_col="infections_cum_per100000",
+        ...     treatment_group=curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     control_group=curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+        ...     study_period=["2020-03-01", "2020-05-15"],
+        ...     treatment_period=["2020-03-21", "2020-05-05"],
+        ...     freq="D",
+        ...     pre_post=True,
+        ...     after_treatment_period=True
+        ...     )
+        >>> curfew_data_prepost.add_synthetic(process_unit="Aachen")
+        """
+
+        did_modeldata = self.data[0].copy()
+
+        covariates = self.data[5].copy()
+        if len(covariates) > 0:
+            tools.check_columns(
+                df = did_modeldata,
+                columns = covariates,
+                verbose = verbose
+                )
+            
+        treatment_cols = self.get_treatment_cols().copy()
+        treatment_name = treatment_cols[0]["treatment_name"]
+        TG_col = treatment_cols[0]["TG_col"]
+        
+        if len(treatment_cols) > 1:
+            print(f"NOTE: Treatment data contains {len(treatment_cols)} treatments. Taking first treatment '{treatment_name}' for identifying treatment group and time.")
+        
+        if verbose:
+            print("Collecting treatment information", end = " ... ")
+
+        groups_config = self.data[1].get_config().copy()
+        treatment_group_size = groups_config[0]["treatment_group"]
+        control_group_size = groups_config[0]["control_group"]
+
+        if verbose:
+            print("OK")
+
+        if treatment_group_size > 1 and process_unit is None:
+            raise ValueError(f"Treatment group contains {treatment_group_size} analysis units and process_unit is set to None. Specify for which unit the SCU must be created.")
+        if control_group_size < 2:
+            raise ValueError(f"Control group contains only {control_group_size} units, which does not allow for creating a SCU.")
+
+        if verbose:
+            print("Extracting control group data", end = " ... ")
+
+        units = list(did_modeldata[config.UNIT_COL].unique())
+
+        process_unit = did_modeldata.loc[did_modeldata[TG_col] == 1, config.UNIT_COL][0]
+
+        if treatment_group_size > 1 and process_unit is not None:
+            
+            if process_unit not in units:
+                raise ValueError(f"Diff-in-diff model data does not contain specified treatment unit '{process_unit}'.")
+
+        units.remove(process_unit)
+        units_size = len(units)
+
+        if verbose:
+            print("OK")
+
+        outcome_col_original = self.data[3]
+        outcome_col = outcome_col_original
+
+        if log_outcome:
+        
+            print(f"Compiling outcome data for natural logarithm of outcome '{outcome_col}'", end = " ... ")
+            
+            outcome_col = f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col_original}"
+            did_modeldata[outcome_col] = np.log(did_modeldata[outcome_col_original]+log_outcome_add)
+        
+        else:
+            if verbose:
+                print(f"Compiling outcome data for outcome '{outcome_col}'", end = " ... ")
+        
+        process_unit_time = pd.Series(did_modeldata.loc[did_modeldata[config.UNIT_COL] == process_unit, config.TIME_COL])
+        process_unit_outcome = pd.Series(did_modeldata.loc[did_modeldata[config.UNIT_COL] == process_unit, outcome_col])
+
+        outcome_matrix = pd.DataFrame(
+            {
+                config.TIME_COL: process_unit_time.reset_index(drop=True),
+                tools.clean_column_name(process_unit): process_unit_outcome.reset_index(drop=True)
+                }
+            )
+
+        units_not_included = []
+
+        for unit in units:
+            
+            did_modeldata_unit = did_modeldata.loc[
+                (did_modeldata[config.UNIT_COL].astype(str) == str(unit))
+                & (did_modeldata[outcome_col].notna()),
+                outcome_col
+            ]
+
+            if len(did_modeldata_unit) != len(outcome_matrix):
+                units_not_included.append(unit)
+                units.remove(unit)
+            else:
+                outcome_matrix[tools.clean_column_name(unit)] = did_modeldata_unit.reset_index(drop=True)
+
+        if len(units_not_included) > 0:
+            print(f"WARNING: {len(units_not_included)} analysis units were not included due to NaN data.")
+
+        if verbose:
+            print("OK")
+            print(f"Calculating weights based on {len(units)} analysis units", end = " ... ")
+
+        outcome_matrix_Y = outcome_matrix.iloc[:, :2]
+        outcome_matrix_X = outcome_matrix.iloc[:, 2:]
+
+        y = outcome_matrix_Y[tools.clean_column_name(process_unit)]
+        X = outcome_matrix_X.values
+
+        def objective(w):
+            return np.sum((y - X @ w)**2)
+
+        n = X.shape[1]
+        w0 = np.ones(n) / n
+        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
+        bounds = [(0, 1)] * n
+
+        result = minimize(
+            objective, 
+            w0,
+            bounds=bounds,
+            constraints=constraints
+            )
+
+        weights = result.x
+        weights_pd = pd.Series(weights, index=units)
+       
+        synthetic_pre = X @ weights
+
+        synthetic_fit_metrics = tools.fit_metrics(
+            observed = y, 
+            expected = synthetic_pre
+        )
+
+        if verbose:
+            print("OK")
+            print(f"Creating synthetic control unit", end = " ... ")
+
+        control_units_data = did_modeldata[did_modeldata[config.UNIT_COL].isin(weights_pd.index)].copy()
+        control_units_data["weights"] = control_units_data[config.UNIT_COL].map(weights_pd)
+        control_units_data[outcome_col] = control_units_data[outcome_col].astype(float)
+        control_units_data.loc[:, outcome_col] = (control_units_data[outcome_col] * control_units_data["weights"])
+        
+        variables_dict = {
+            outcome_col: "sum"
+        }
+        for covariate in covariates:
+            control_units_data[covariate] = control_units_data[covariate].astype(float)
+            control_units_data.loc[:, covariate] = control_units_data[covariate]*control_units_data["weights"]
+            variables_dict[covariate] = "sum"
+
+        synthetic = (
+            control_units_data
+            .groupby(config.TIME_COL, as_index=False)
+            .agg(variables_dict)
+        )
+
+        if log_outcome:
+            synthetic[outcome_col_original] = np.exp(synthetic[outcome_col])
+
+        if verbose:
+            print("OK")
+
+        self.add_own_counterfactual(
+            additional_df=synthetic, 
+            counterfactual_outcome_col=outcome_col_original, 
+            counterfactual_UID=SCU_UID,
+            time_col=config.TIME_COL,
+            verbose = False
+            )
+        
+        return self
+ 
     def summary(self):
 
         """
@@ -2112,7 +2347,8 @@ def merge_data(
     groups_config = diff_groups.get_config()
     groups_config = groups_config[0]
     
-    treatment_data_df = diff_treatment.get_data()
+    treatment_data = diff_treatment.get_data()
+    treatment_data_df = treatment_data[0]
     treatment_config = diff_treatment.get_config()
     treatment_config = treatment_config[0]    
 

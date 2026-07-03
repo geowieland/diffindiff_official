@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.2.1
-# Last update: 2025-06 28 13:03
+# Version:     1.2.2
+# Last update: 2026-07-02 20:18
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -876,6 +876,12 @@ def data_diagnostics(
     outcome_mean = np.mean(data[outcome_col])
     outcome_sd = np.std(data[outcome_col])
     
+    cols_constants = []
+    if len(other_cols_relevant) > 0:
+        for col in other_cols_relevant:
+           if data[col].nunique() == 1:
+                cols_constants.append(col)
+    
     data_diagnostics_results = {
         list(config.DATA_DIAGNOSTICS)[0]: bool(modeldata_isbalanced),
         list(config.DATA_DIAGNOSTICS)[1]: bool(modeldata_ismissing[0]),
@@ -885,7 +891,8 @@ def data_diagnostics(
         list(config.DATA_DIAGNOSTICS)[5]: data_type,
         list(config.DATA_DIAGNOSTICS)[6]: outcome_col, 
         list(config.DATA_DIAGNOSTICS)[7]: f"Mean={round(outcome_mean, config.ROUND_STATISTIC)} SD={round(outcome_sd, config.ROUND_STATISTIC)}",
-        list(config.DATA_DIAGNOSTICS)[8]: observations,        
+        list(config.DATA_DIAGNOSTICS)[8]: observations,
+        list(config.DATA_DIAGNOSTICS)[9]: cols_constants
         }
     
     return data_diagnostics_results
@@ -927,7 +934,7 @@ def treatment_diagnostics(
     Returns
     -------
     list
-        [treatment_diagnostics_results (dict), staggered_adoption (bool), untreated (list)]
+        [treatment_diagnostics_results (dict), staggered_adoption (bool), untreated (list), unique_units (int), unique_timepoints (int)]
 
     Examples
     --------
@@ -1020,6 +1027,15 @@ def treatment_diagnostics(
         verbose = verbose
         )
     
+    groups_units_list = []
+    for key, value in treatment_diagnostics_results.items():
+        groups_units_list.extend(value["treatment_group"])
+        groups_units_list.extend(value["control_group"])
+    groups_units_list = list(set(groups_units_list))
+    unique_units = len(groups_units_list)
+    
+    unique_timepoints = data[time_col].nunique()
+    
     if verbose:
         
         if no_treatments > 1:
@@ -1030,7 +1046,9 @@ def treatment_diagnostics(
     return [
         treatment_diagnostics_results,
         staggered_adoption,
-        untreated
+        untreated,
+        unique_units,
+        unique_timepoints
     ]
 
 def ols_fit(

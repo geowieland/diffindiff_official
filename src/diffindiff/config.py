@@ -4,15 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.20
-# Last update: 2026-06-28 12:31
+# Version:     1.0.21
+# Last update: 2026-07-03 17:50
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 # Basic config:
 
 PACKAGE_NAME = "diffindiff"
-PACKAGE_VERSION = "2.4.2"
+PACKAGE_VERSION = "2.5.0"
 
 VERBOSE = False
 
@@ -20,6 +20,11 @@ ROUND_STATISTIC = 3
 ROUND_PERCENT = 2
 
 AUTO_SWITCH_TO_PREPOST = True
+
+AUTO_SWITCH_TO_FIXED_EFFECTS = True
+FIXED_EFFECTS_THRESHOLD = 3
+
+AUTO_SKIP_CONSTANT_COLUMNS = True
 
 ACCEPT_CONTINUOUS_TREATMENTS = True
 
@@ -96,6 +101,7 @@ LOG_PREFIX = "log"
 OBSERVED_SUFFIX = "observed"
 EXPECTED_SUFFIX = "expected"
 DEMEAN_SUFFIX = "demean"
+WEIGHTED_SUFFIX = "_weighted"
 PREDICTED_SUFFIX = "pred"
 CI_LOWER_SUFFIX = "CI_lower"
 CI_UPPER_SUFFIX = "CI_upper"
@@ -500,7 +506,11 @@ DATA_DIAGNOSTICS = {
         "description": N_DESCRIPTION,
         "show_in_summary": True
         },
-    }
+    "cols_constants": {
+        "description": "Columns with constant values",
+        "show_in_summary": False
+    },
+}
 
 DIAGNOSTICS_COLUMN = "Result"
 
