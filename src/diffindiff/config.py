@@ -4,15 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.21
-# Last update: 2026-07-03 17:50
+# Version:     1.0.22
+# Last update: 2026-07-10 11:36
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 # Basic config:
 
 PACKAGE_NAME = "diffindiff"
-PACKAGE_VERSION = "2.5.0"
+PACKAGE_VERSION = "2.5.1"
 
 VERBOSE = False
 
@@ -52,6 +52,7 @@ TREATMENT_PERIOD_DESCRIPTION = f"{TREATMENT_DESCRIPTION} period"
 STUDY_PERIOD_DESCRIPTION = "Study period"
 PREPOST_DESCRIPTION = "Pre-post"
 AFTER_TREATMENT_PERIOD_DESCRIPTION = "After-treatment period"
+FOLLOW_UP_DESCRIPTION = "Follow-up"
 
 UNITS_DESCRIPTION = "Units"
 

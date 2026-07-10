@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.0.15
-# Last update: 2026-05-01 09:54
+# Version:     2.1.0
+# Last update: 2026-07-10 11:35
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -74,7 +74,8 @@ curfew_data_prepost=create_data(
     study_period=["2020-03-01", "2020-05-15"],
     treatment_period=["2020-03-21", "2020-05-05"],
     freq="D",
-    pre_post=True
+    pre_post=True,
+    after_treatment_period = False
     )
 # Creating DiD treatement dataset by defining groups and
 # treatment time at once
@@ -96,6 +97,9 @@ print(curfew_model_prepost.covariates())
 
 curfew_model_prepost.summary()
 # Model summary
+
+print(curfew_model_prepost.didmodel().summary())
+# Access statsmodels OLS object
 
 print(curfew_model_prepost.fit_metrics())
 # Show model fit metrics
@@ -135,6 +139,59 @@ curfew_model_prepost.plot_treatment_effects(
     scale_plot=False
     )
 # plot effects
+
+
+# Same analysis with after-treatment period (follow-up):
+
+curfew_data_prepost_AT=create_data(
+    outcome_data=curfew_DE,
+    unit_id_col="county",
+    time_col="infection_date",
+    outcome_col="infections_cum_per100000",
+    treatment_group= 
+        curfew_DE.loc[curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+    control_group= 
+        curfew_DE.loc[~curfew_DE["Bundesland"].isin([9,10,14])]["county"],
+    study_period=["2020-03-01", "2020-05-15"],
+    treatment_period=["2020-03-21", "2020-05-05"],
+    freq="D",
+    pre_post=True,
+    after_treatment_period = True
+    )
+# Creating DiD treatement dataset by defining groups and
+# treatment time at once
+
+curfew_data_prepost_AT.summary()
+# Summary of created data
+
+curfew_model_prepost_AT=curfew_data_prepost_AT.analysis(verbose=True)
+# Model analysis of created data
+
+curfew_model_prepost_AT.summary()
+# Model summary
+
+curfew_model_prepost_AT.plot(
+    x_label="Timepoint",
+    y_label="Cumulative infections per 100,000",
+    plot_title="Curfew effectiveness pre-post - Groups over time",
+    plot_observed=False,
+    lines_col=[None,None,"blue","orange"],
+    lines_labels=[None,None,"Treatment group","Control group","Treatment group CI","Control group CI"],
+    lines_style=[None,None,"solid","solid"]
+    )
+# Plot DiD pre vs. post results
+# with user-determined style
+
+curfew_model_prepost_AT.plot(
+    x_label="Timepoint",
+    y_label="Cumulative infections per 100,000",
+    plot_title="Curfew effectiveness pre-post - Groups over time",
+    lines_col=[None,None,"blue","orange"],
+    lines_labels=[None,None,"Treatment group","Control group","Treatment group CI", "Control group CI"],
+    pre_post_barplot=True
+    )
+# Plot DiD pre vs. post results
+# with user-determined style
 
 counties_DE=pd.read_csv("data/counties_DE.csv", sep=";", decimal=",", encoding='latin1')
 # Dataset with German county data

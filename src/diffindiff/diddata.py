@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.0
-# Last update: 2026-07-03 18:00
+# Version:     2.3.1
+# Last update: 2026-07-10 11:37
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -622,15 +622,36 @@ def create_treatment(
 
     if pre_post:
 
-        after_treatment_period = False
+        if after_treatment_period:
 
-        study_period_range = [study_period[0], study_period[1]]
-        study_period_N = 2
-        study_period_counter = [1,2]
+            if study_period[1] <= treatment_period[1]:
+                
+                print(f"WARNING: after_treatment_period is set True, but end of study period ({study_period[1]}) is <= end of treatment period ({treatment_period[1]}). After treatment period is ignored.")
+                
+                after_treatment_period = False
 
-        treatment_period_range = [treatment_period[0], treatment_period[1]]
-        treatment_period_N = 1
-        TT_dummies = [0,1]
+            else:
+
+                study_period_range = [study_period[0], study_period[1]]
+                study_period_N = 3
+                study_period_counter = [1,2,3]
+
+                treatment_period_N = 1
+                TT_dummies = [0,1,0]
+                ATT_dummies = [0,0,1]
+
+                treatment_period_range = [study_period[0], treatment_period[1], study_period[1]]
+                after_treatment_period_range = treatment_period_range
+        
+        else:
+                
+            study_period_range = [study_period[0], study_period[1]]
+            study_period_N = 2
+            study_period_counter = [1,2]
+
+            treatment_period_range = [treatment_period[0], treatment_period[1]]
+            treatment_period_N = 1
+            TT_dummies = [0,1]
 
         study_period_range = pd.DataFrame (treatment_period_range, columns=[config.TIME_COL])
         study_period_range[config.TIME_COUNTER_COL] = pd.DataFrame(study_period_counter)
@@ -640,7 +661,7 @@ def create_treatment(
             TT_col: TT_dummies
             }
         
-        TT_data = pd.DataFrame(TT_data)
+        TT_data = pd.DataFrame(TT_data)    
         
         treatment_period_range = pd.DataFrame(
             study_period_range
@@ -650,6 +671,24 @@ def create_treatment(
             TT_data, 
             how = "left"
             )
+        
+        if after_treatment_period:
+
+            ATT_data = {
+                config.TIME_COL: after_treatment_period_range, 
+                ATT_col: ATT_dummies
+                }
+
+            ATT_data = pd.DataFrame(ATT_data)
+
+            after_treatment_period_range = pd.DataFrame (after_treatment_period_range, columns=[config.TIME_COL])
+            after_treatment_period_range[config.TIME_COUNTER_COL] = pd.DataFrame(study_period_counter)
+
+            after_treatment_data_df = after_treatment_period_range.merge(ATT_data, how = "left")
+            after_treatment_data_df[ATT_col] = after_treatment_data_df[ATT_col].fillna(0)
+            after_treatment_data_df = after_treatment_data_df.drop(columns=[config.TIME_COL, config.TIME_COUNTER_COL])
+
+            treatment_data_df = pd.concat([treatment_data_df, after_treatment_data_df], axis=1)
 
     else:
 
@@ -689,7 +728,7 @@ def create_treatment(
 
     treatment_data_df[TT_col] = treatment_data_df[TT_col].fillna(0)
 
-    if after_treatment_period:
+    if after_treatment_period and not pre_post:
         
         treatment_period_last = datetime.strptime(
             treatment_period[1], 
@@ -720,6 +759,9 @@ def create_treatment(
 
     else:
         after_treatment_period_N = 0
+
+    if after_treatment_period and pre_post:
+        after_treatment_period_N = 1
     
     no_treatments = 1
 
@@ -735,7 +777,7 @@ def create_treatment(
         "date_format": date_format,
         "pre_post": pre_post
         }
-
+    
     treatment_config = {
         0: {
             "treatment_name": treatment_name,
@@ -2050,7 +2092,10 @@ class DiffData:
             else:
                 print(f"  {config.STUDY_PERIOD_DESCRIPTION:<{config.DIDDATA_SUMMARY_MAX_WIDTH}} {treatment_meta['study_period_start']} - {treatment_meta['study_period_end']} ({treatment_meta['study_period']} {treatment_meta['frequency']})")
                 print(f"  {config.TREATMENT_PERIOD_DESCRIPTION:<{config.DIDDATA_SUMMARY_MAX_WIDTH}} {treatment_config[key]['treatment_period_start']} - {treatment_config[key]['treatment_period_end']} ({treatment_config[key]['treatment_period']} {treatment_meta['frequency']})")
-                
+
+            if value["after_treatment_period"]:
+                print(f"  {config.AFTER_TREATMENT_PERIOD_DESCRIPTION:<{config.DIDDATA_SUMMARY_MAX_WIDTH}} {treatment_config[key]['treatment_period_end']} vs. {treatment_meta['study_period_end']} ({config.FOLLOW_UP_DESCRIPTION})")
+
         print("-" * total_width)
 
         print(f"Outcome '{outcome_col_original}'")

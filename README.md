@@ -21,7 +21,7 @@ A research note featuring a case study that utilizes the diffindiff library is a
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -169,16 +169,9 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.5.0)
+## What's new (v2.5.1)
 
-- General
-  - Update of dependencies to be compatible with Python 3.13 (still works with Python 3.11) while avoiding incompatibility conflict of statsmodels and scipy
-  - Internal changes in some functions to be compatible with Python 3.13 (still works with Python 3.11)
-- Extensions
-  - Creating synthetic control units with DiffData.add_synthetic() and conducting a Synthetic DiD analysis
-  - didanalysis_helper.treatment_diagnostics() now additionally checks unique number of analysis units and time points
-  - didanalysis_helper.data_diagnostics() now additionally checks whether covariates are constant; didanalysis.did_analysis() and .ddd_analysis() automatically skip such variables from the model analysis
 - Bugfixes
-  - DiffData.add_own_counterfactual() now works correctly in any case (also when no. of treatments > 1)
-  - Correct internal processing of treatment data in DiffTreatment and DiffData objects when treatments were added
-  - Fixed missing treatment group definition in DiffData.add_treatment() 
+  - In DiffData.create_treatment() and DiffData.create_data(), pre-post designs with after-treatment period (follow-up) now work correctly
+  - DiffModel.plot() nows supports pre-post designs with after-treatment period
+  - Some small stabilizations

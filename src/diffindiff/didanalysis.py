@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.1
-# Last update: 2026-07-02 20:17
+# Version:     2.4.2
+# Last update: 2026-07-10 11:30
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -897,6 +897,49 @@ class DiffModel:
         confint_alpha = model_config["confint_alpha"]    
         
         treatment_effects = self.treatment_effects()
+
+        try:
+            if model_config.get("pre_post", False) and len(model_config.get("after_treatment_col", [])) > 0:
+
+                labels = treatment_effects.iloc[:, 0].astype(str).values
+                has_after = any((config.AFTER_TREATMENT_PERIOD_DESCRIPTION in lab) or (config.ATT_COL in lab) for lab in labels)
+                if not has_after:
+                    model_results = self.data[0]
+
+                    aate_key = config.EFFECTS_TYPES["AATE"]["model_results_key"] if "AATE" in config.EFFECTS_TYPES else "average_after_treatment_effects"
+                    att_key = config.EFFECTS_TYPES["ATT"]["model_results_key"] if "ATT" in config.EFFECTS_TYPES else "after_treatment_time_effects"
+                    appended = False
+
+                    for key_try in [aate_key, att_key]:
+                        if key_try in model_results and isinstance(model_results[key_try], dict):
+                            for subkey, val in model_results[key_try].items():
+
+                                if isinstance(val, dict):
+
+                                    coef_k = config.OLS_MODEL_RESULTS["coef"]["model_results_key"]
+                                    se_k = config.OLS_MODEL_RESULTS["coef_standard_errors"]["model_results_key"]
+                                    t_k = config.OLS_MODEL_RESULTS["coef_teststatistic"]["model_results_key"]
+                                    p_k = config.OLS_MODEL_RESULTS["coef_p"]["model_results_key"]
+                                    cil_k = config.OLS_MODEL_RESULTS["coef_confint_lower"]["model_results_key"]
+                                    ciu_k = config.OLS_MODEL_RESULTS["coef_confint_upper"]["model_results_key"]
+
+                                    new_row = {
+                                        "": f"{config.EFFECTS_TYPES.get('AATE', {'description': 'After-treatment'})['description']} {subkey}",
+                                        "Estimate": val.get(coef_k, np.nan),
+                                        "SE": val.get(se_k, np.nan),
+                                        "t": val.get(t_k, np.nan),
+                                        "p": val.get(p_k, np.nan),
+                                        "CI lower": val.get(cil_k, np.nan),
+                                        "CI upper": val.get(ciu_k, np.nan),
+                                    }
+                                    treatment_effects = pd.concat([treatment_effects, pd.DataFrame([new_row])], ignore_index=True)
+                                    appended = True
+                                    break
+                        if appended:
+                            break
+        except Exception:
+
+            pass
 
         if sort_by_coef:
             treatment_effects = treatment_effects.sort_values(
@@ -1807,14 +1850,14 @@ class DiffModel:
         model_data_TG_CG["t"] = pd.to_datetime(model_data_TG_CG["t"])
 
         if not model_config["pre_post"]:
-            pre_post_barplot = False        
+            pre_post_barplot = False
 
         if pre_post_barplot:
 
             x_pos_t1_TG = 0
             x_pos_t1_CG = x_pos_t1_TG + pre_post_bar_width  
             x_pos_t2_TG = 1.5  
-            x_pos_t2_CG = x_pos_t2_TG + pre_post_bar_width  
+            x_pos_t2_CG = x_pos_t2_TG + pre_post_bar_width
 
             plt.bar(
                 x = x_pos_t1_TG, 
@@ -1842,6 +1885,24 @@ class DiffModel:
                 color=lines_col[3], 
                 width = pre_post_bar_width
                 )
+            
+            if len(model_data_TG_CG) == 3:
+
+                x_pos_t3_TG = 3  
+                x_pos_t3_CG = x_pos_t3_TG + pre_post_bar_width
+
+                plt.bar(
+                    x = x_pos_t3_TG, 
+                    height = model_data_TG_CG[outcome_col_expected_TG][2],                 
+                    color = lines_col[2], 
+                    width = pre_post_bar_width
+                    )            
+                plt.bar(
+                    x = x_pos_t3_CG, 
+                    height = model_data_TG_CG[outcome_col_expected_CG][2],                 
+                    color=lines_col[3], 
+                    width = pre_post_bar_width
+                    )
 
             plt.xlabel(x_label)
             plt.ylabel(y_label)
@@ -1935,16 +1996,29 @@ class DiffModel:
             ax.xaxis.set_major_formatter(DateFormatter(model_config["date_format"]))
 
         if model_config["pre_post"]:
+
+            ticks_line = model_data_TG_CG["t"].unique()
+            ticks_bars = [0.25, 1.75]
+
+            if len(model_data_TG_CG) == 3:
+                
+                if len(pre_post_ticks) < 3:
+                    pre_post_ticks.append("Follow-up")
+
+                ticks_bars.append(3.25)
+
             if not pre_post_barplot:
+                
                 plt.xticks(
-                    model_data_TG_CG["t"].unique(), 
-                    labels = [pre_post_ticks[0], pre_post_ticks[1]]
+                    ticks_line, 
+                    labels = pre_post_ticks
                     )  
             else:
                 plt.xticks(
-                    [0.25, 1.75], 
-                    labels = [pre_post_ticks[0], pre_post_ticks[1]]
-                    )  
+                    ticks_bars, 
+                    labels = pre_post_ticks
+                    )
+                
         else:
             plt.xticks(rotation=90)
         
@@ -2644,6 +2718,8 @@ def did_analysis(
     FE_time_vars = []
     dummy_time_original = []
     
+    drop_first = intercept
+
     if not demean:
 
         if FE_unit:
@@ -2652,7 +2728,7 @@ def did_analysis(
                 data = data,
                 col = unit_col,
                 type = "unit",
-                drop_first = intercept,
+                drop_first = drop_first,
                 verbose = verbose
             )
             
@@ -2667,7 +2743,7 @@ def did_analysis(
                 data = data,
                 col = time_col,
                 type = "time",
-                drop_first = intercept,
+                drop_first = drop_first,
                 verbose = verbose
             )
             
@@ -2691,7 +2767,7 @@ def did_analysis(
                 data = data,
                 col = group_by,
                 type = "group",
-                drop_first = intercept,
+                drop_first = drop_first,
                 verbose = verbose
                 )
         
