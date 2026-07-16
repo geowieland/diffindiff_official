@@ -14,14 +14,14 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 - 💻 GitHub Repository: [diffindiff_official](https://github.com/geowieland/diffindiff_official)
 - 📄 DOI (Zenodo): [10.5281/zenodo.18656820](https://doi.org/10.5281/zenodo.18656820)
 
-A research note featuring a case study that utilizes the diffindiff library is available on [arXiv](https://arxiv.org/abs/2605.21464).
+A case study that utilizes the diffindiff library is available on [arXiv](https://arxiv.org/abs/2605.21464).
 
 
 ## Citation
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -45,6 +45,7 @@ pip install git+https://github.com/geowieland/diffindiff_official.git
   - Define custom treatment and control groups as well as treatment periods
   - Create ready-to-fit DiD data objects
   - Create predictive counterfactuals
+  - Create a synthetic control unit 
 - **DiD analysis**: 
   - Perform standard DiD analysis with pre-post data
   - Perform DiD analysis with two-way fixed effects models
@@ -58,6 +59,7 @@ pip install git+https://github.com/geowieland/diffindiff_official.git
     - Including after-treatment period
   - Perform Triple Difference (DDD) analysis
   - Perform DiD analysis with demeaned data
+  - Perform Synthetic DiD analysis
 - **Diagnosis tools and extensions of analyses**:
   - Add own counterfactuals or create counterfactuals based on machine learning or OLS regression models
   - Bonferroni correction for treatment effects
@@ -169,9 +171,11 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.5.1)
+## What's new (v2.5.2)
 
+- Extensions
+  - New functions DiffData.get_synthetic_control_weightings() and DiffData.get_synthetic_control_fitmetrics() for accessing control unit weightings and fit metrics of the synthetic control unit
 - Bugfixes
-  - In DiffData.create_treatment() and DiffData.create_data(), pre-post designs with after-treatment period (follow-up) now work correctly
-  - DiffModel.plot() nows supports pre-post designs with after-treatment period
-  - Some small stabilizations
+  - DiffModel.placebo() now checks control group size and returns warning when no. of control units is equal to 1, not allowing any placebo test
+- Other
+  - Some updates of documentation and README  

@@ -4,15 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.22
-# Last update: 2026-07-10 11:36
+# Version:     1.0.23
+# Last update: 2026-07-14 19:48
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 # Basic config:
 
 PACKAGE_NAME = "diffindiff"
-PACKAGE_VERSION = "2.5.1"
+PACKAGE_VERSION = "2.5.2"
 
 VERBOSE = False
 

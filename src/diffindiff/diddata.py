@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.1
-# Last update: 2026-07-10 11:37
+# Version:     2.3.2
+# Last update: 2026-07-16 18:52
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -815,7 +815,8 @@ class DiffData:
         unit_time_col_original,
         covariates,
         treatment_cols,
-        timestamp
+        timestamp,
+        synthetic_control
         ):
 
         """
@@ -840,6 +841,8 @@ class DiffData:
             Mapping of treatment columns metadata.
         timestamp : dict
             Timestamp metadata.
+        synthetic_control : dict
+            If included, data for a synthetic control unit, else None.
         Returns
         -------
         None
@@ -855,7 +858,8 @@ class DiffData:
             unit_time_col_original,
             covariates,
             treatment_cols,
-            timestamp
+            timestamp,
+            synthetic_control
             ]
 
     def get_did_modeldata_df (self):
@@ -1060,6 +1064,46 @@ class DiffData:
         """
 
         return self.data[7]
+    
+    def get_synthetic_control_weightings(self):
+
+        """
+        Return weightings of the synthetic control unit (if included in the DiffData object).
+
+        Returns
+        -------
+        pandas.DataFrame
+            Weighting by control unit.
+        
+        Examples
+        --------
+        >>> my_diffdata.get_synthetic_control_weightings()
+        """
+
+        if len(self.data[8]) > 0:
+            return self.data[8]["weights"]
+        else:
+            print("The DiffData object does not include a synthetic control unit.")
+            
+    def get_synthetic_control_fitmetrics(self):
+
+        """
+        Return fit metrics of the synthetic control unit (if included in the DiffData object).
+
+        Returns
+        -------
+        list
+            Fit metrics (dict) and data points with residuals (pandas.DataFrame).
+        
+        Examples
+        --------
+        >>> my_diffdata.get_synthetic_control_fitmetrics()
+        """
+
+        if len(self.data[8]) > 0:
+            return self.data[8]["fit_metrics"]
+        else:
+            print("The DiffData object does not include a synthetic control unit.")
 
     def add_covariates(
         self, 
@@ -2033,6 +2077,14 @@ class DiffData:
             verbose = False
             )
         
+        self.data[7] = helper.create_timestamp(function="add_synthetic")
+        
+        self.data[8] = {
+            "weights": weights_pd,
+            "fit_metrics": synthetic_fit_metrics,
+            "process_unit": process_unit
+        }
+        
         return self
  
     def summary(self):
@@ -2489,7 +2541,8 @@ def merge_data(
         unit_time_col_original,
         [],
         treatment_cols,
-        timestamp
+        timestamp,
+        {}
         )
 
     if verbose:

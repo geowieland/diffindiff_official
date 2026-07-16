@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.2
-# Last update: 2026-07-10 11:30
+# Version:     2.4.3
+# Last update: 2026-07-14 19:49
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1422,10 +1422,15 @@ class DiffModel:
         model_data_c[time_col] = pd.to_datetime(model_data_c[time_col])
         model_data_c[unit_col] = model_data_c[unit_col].astype(str)
 
-        units_random_sample = model_data_c[unit_col].sample(
-            n = int(round(divide*control_group_N*resample, 0)), 
-            random_state = random_state
-            ).astype(str).tolist()
+        if control_group_N < 2:
+            print(f"WARNING: Model includes one control unit only: '{control_group[0]}'. Placebo analysis requires size of control group >1. Original model is returned.")
+            return self
+
+        else:
+            units_random_sample = model_data_c[unit_col].sample(
+                n = int(round(divide*control_group_N*resample, 0)), 
+                random_state = random_state
+                ).astype(str).tolist()
 
         model_data_c[TG_col_] = 0
         model_data_c.loc[(model_data_c[unit_col].isin(units_random_sample)), TG_col_] = 1
