@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.3
-# Last update: 2026-07-14 19:49
+# Version:     2.4.4
+# Last update: 2026-07-23 19:42
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -782,7 +782,7 @@ class DiffModel:
       
         if len(no_control_conditions) > 0:
             if len(no_control_conditions) == 1:
-                print(f"NOTE: Treatment {no_control_conditions[0]} has no control conditions.")
+                print(f"NOTE: Treatment '{no_control_conditions[0]}' has no control conditions.")
             else:
                 print(f"NOTE: Treatments {', '.join(no_control_conditions)} have no control conditions.")  
 
@@ -829,7 +829,9 @@ class DiffModel:
         plot_size: list = [7, 6],
         scale_plot: bool = True,
         show_central_tendency: bool = False,
-        central_tendency: str = "mean"
+        central_tendency: str = "mean",
+        save_fig: str = None,
+        save_fig_kwargs: dict = {}
         ):
            
         """
@@ -869,6 +871,10 @@ class DiffModel:
             Show mean/median line for estimates. Default is False.
         central_tendency : str, optional
             'mean' or 'median' for central tendency if shown. Default is 'mean'.
+        save_fig : str, optional
+            If not none, filename of plot to be saved.
+        save_fig_kwargs : dict, optional
+            Optional arguments for plt.savefig() if save_fig is not None.
 
         Returns
         -------
@@ -1005,6 +1011,9 @@ class DiffModel:
         plt.title(plot_title, fontsize=14)
         if plot_grid:
             plt.grid(True)
+        
+        if save_fig is not None and isinstance(save_fig, str):
+            plt.savefig(save_fig, **save_fig_kwargs)
         
         plt.show()
 
@@ -1473,7 +1482,9 @@ class DiffModel:
         y_lim = None,
         plot_title: str = "Treatment time",
         plot_symbol: str = "o",
-        treatment_group_only: bool = True
+        treatment_group_only: bool = True,
+        save_fig: str = None,
+        save_fig_kwargs: dict = {}
         ):
 
         """
@@ -1497,6 +1508,10 @@ class DiffModel:
             Symbol used for treatment timing points. Default is 'o'.
         treatment_group_only : bool, optional
             If True, only plot treated units.
+        save_fig : str, optional
+            If not none, filename of plot to be saved.
+        save_fig_kwargs : dict, optional
+            Optional arguments for plt.savefig() if save_fig is not None.
 
         Returns
         -------
@@ -1570,6 +1585,9 @@ class DiffModel:
         
         if y_lim is not None:
             ax.set_ylim(y_lim)
+        
+        if save_fig is not None and isinstance(save_fig, str):
+            plt.savefig(save_fig, **save_fig_kwargs)
 
         plt.show()
 
@@ -1595,7 +1613,9 @@ class DiffModel:
         pre_post_ticks: list = ["Pre", "Post"],
         pre_post_barplot = False,
         pre_post_bar_width = 0.5,
-        retransform_log_outcome: bool = False
+        retransform_log_outcome: bool = False,
+        save_fig: str = None,
+        save_fig_kwargs: dict = {}
         ):
 
         """
@@ -1642,6 +1662,10 @@ class DiffModel:
         retransform_log_outcome : bool, optional
             If outcome was log-transformed, retransform to original scale for plotting. 
             Default is False.
+        save_fig : str, optional
+            If not none, filename of plot to be saved.
+        save_fig_kwargs : dict, optional
+            Optional arguments for plt.savefig() if save_fig is not None.
 
         Returns
         -------
@@ -2044,7 +2068,10 @@ class DiffModel:
 
         if y_lim is not None:
             ax.set_ylim(y_lim)
-            
+        
+        if save_fig is not None and isinstance(save_fig, str):
+            plt.savefig(save_fig, **save_fig_kwargs)
+        
         plt.show()
         
         return model_data_TG_CG    
@@ -2063,7 +2090,9 @@ class DiffModel:
         plot_legend: bool = True,
         plot_grid: bool = True,
         plot_size: list = [12, 6],
-        retransform_log_outcome: bool = False
+        retransform_log_outcome: bool = False,
+        save_fig: str = None,
+        save_fig_kwargs: dict = {}
         ):
 
         """
@@ -2098,6 +2127,10 @@ class DiffModel:
         retransform_log_outcome : bool, optional
             If outcome was log-transformed, retransform to original scale for plotting. 
             Default is False.
+        save_fig : str, optional
+            If not none, filename of plot to be saved.
+        save_fig_kwargs : dict, optional
+            Optional arguments for plt.savefig() if save_fig is not None.
 
         Returns
         -------
@@ -2227,6 +2260,9 @@ class DiffModel:
         
         if y_lim is not None:
             ax.set_ylim(y_lim)
+        
+        if save_fig is not None and isinstance(save_fig, str):
+            plt.savefig(save_fig, **save_fig_kwargs)
             
         plt.show()
 

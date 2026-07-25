@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.4
-# Last update: 2026-04-28 21:45
+# Version:     2.2.5
+# Last update: 2026-07-23 19:34
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -540,10 +540,10 @@ def is_simultaneous(
             print("OK")
 
         if not simultaneous and data_isnotreatment[0]:
-            print(f"NOTE: treatment '{treatment_col}' is not simultaneous.")
+            print(f"NOTE: Treatment '{treatment_col}' is not simultaneous.")
 
         if simultaneous and not data_isnotreatment[0]:
-            print(f"WARNING: treatment '{treatment_col}' is simultaneous and does not include a {config.NO_TREATMENT_CG_DESCRIPTION}")
+            print(f"WARNING: Treatment '{treatment_col}' is simultaneous and does not include a {config.NO_TREATMENT_CG_DESCRIPTION}")
 
     return simultaneous
 
