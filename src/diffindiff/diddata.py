@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.2
-# Last update: 2026-07-16 18:52
+# Version:     2.3.3
+# Last update: 2026-08-04 17:51
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1986,10 +1986,11 @@ class DiffData:
                 }
             )
 
+        columns = {}
         units_not_included = []
+        valid_units = []
 
         for unit in units:
-            
             did_modeldata_unit = did_modeldata.loc[
                 (did_modeldata[config.UNIT_COL].astype(str) == str(unit))
                 & (did_modeldata[outcome_col].notna()),
@@ -1998,9 +1999,19 @@ class DiffData:
 
             if len(did_modeldata_unit) != len(outcome_matrix):
                 units_not_included.append(unit)
-                units.remove(unit)
             else:
-                outcome_matrix[tools.clean_column_name(unit)] = did_modeldata_unit.reset_index(drop=True)
+                valid_units.append(unit)
+                columns[tools.clean_column_name(unit)] = did_modeldata_unit.reset_index(drop=True)
+
+        outcome_matrix = pd.concat(
+            [
+                outcome_matrix, 
+                pd.DataFrame(columns)
+            ],
+            axis=1
+            )
+
+        units = valid_units
 
         if len(units_not_included) > 0:
             print(f"WARNING: {len(units_not_included)} analysis units were not included due to NaN data.")

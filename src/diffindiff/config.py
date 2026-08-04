@@ -4,15 +4,15 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.0.24
-# Last update: 2026-07-25 12:31
+# Version:     1.0.25
+# Last update: 2026-08-04 18:17
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
 # Basic config:
 
 PACKAGE_NAME = "diffindiff"
-PACKAGE_VERSION = "2.5.3"
+PACKAGE_VERSION = "2.5.4"
 
 VERBOSE = False
 
@@ -25,6 +25,8 @@ AUTO_SWITCH_TO_FIXED_EFFECTS = True
 FIXED_EFFECTS_THRESHOLD = 3
 
 AUTO_SKIP_CONSTANT_COLUMNS = True
+
+REMOVE_DUPLICATES_FROM_RESULTS_DICT = True
 
 ACCEPT_CONTINUOUS_TREATMENTS = True
 

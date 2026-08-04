@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.2.3
-# Last update: 2026-07-14 19:44
+# Version:     1.2.4
+# Last update: 2026-08-04 17:35
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ def create_fixed_effects(
     type: str = "unit",
     drop_first: bool = False,
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
 
     """
     Create dummy variables for fixed effects and attach them to the data.
@@ -118,7 +118,7 @@ def demean_variables(
     max_iter=10,
     tol=1e-8,
     verbose: bool = config.VERBOSE    
-    ):
+    ) -> tuple:
     
     """
     Demean numeric variables by removing unit and/or time means.
@@ -399,7 +399,7 @@ def create_specific_time_trends(
     FE_vars: list,
     type: str = "ITT",
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
 
     """
     Create unit-specific time trend variables (interactions with a time counter).
@@ -482,7 +482,7 @@ def create_specific_treatment_effects(
     FE_vars: list,
     type: str = "ITE",
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
 
     """
     Create unit-specific treatment effect interaction variables.
@@ -566,7 +566,7 @@ def create_spillover(
     spillover_treatment: list = None,
     spillover_units: list = None,
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
 
     """
     Create spillover indicator variables for given treatments and units.
@@ -667,7 +667,7 @@ def create_interactions(
     data: pd.DataFrame,
     interactions: dict = None,
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
 
     """
     Create interaction variables by multiplying specified treatment columns.
@@ -787,7 +787,7 @@ def data_diagnostics(
     drop_missing: bool = True,
     missing_replace_by_zero: bool = False,
     verbose: bool = config.VERBOSE
-    ):
+    ) -> dict:
 
     """
     Run diagnostics on model data: missingness, balance and basic stats.
@@ -906,7 +906,7 @@ def treatment_diagnostics(
     pre_post: bool = False,
     confint_alpha = 0.05,
     verbose: bool = config.VERBOSE    
-    ):
+    ) -> list:
     
     """
     Compute diagnostics for each treatment: simultaneity, parallel trends, 
@@ -1057,7 +1057,7 @@ def ols_fit(
     confint_alpha = 0.05,
     cluster_SE_by: str = None,
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
     
     """
     Estimate an OLS model using a formula and return coefficients and predictions.
@@ -1130,7 +1130,7 @@ def ml_fit(
     family=sm.families.Gaussian(),
     link=sm.families.links.Identity(),
     verbose: bool = config.VERBOSE
-    ):
+    ) -> list:
     
     """
     Estimate a model by maximum likelihood (GLM) and return coefficients and predictions.
@@ -1217,7 +1217,7 @@ def extract_model_results(
     BG_x_TT_col: list = None,
     covariates: list = None,
     verbose: bool = config.VERBOSE
-    ):
+    ) -> dict:
 
     """
     Compile and format model coefficient results into a structured dict.
@@ -1311,6 +1311,9 @@ def extract_model_results(
                 "CI_lower": float(coef_conf_intervals.loc[treatment, 0]),
                 "CI_upper": float(coef_conf_intervals.loc[treatment, 1]),
                 }
+            
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            ATE = remove_duplicates_from_dict(ATE)
         
         model_results = {config.EFFECTS_TYPES["ATE"]["model_results_key"]: ATE}
     
@@ -1329,6 +1332,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[TG_, 1]),
                 }
                         
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            beta_1 = remove_duplicates_from_dict(beta_1)
+            
         model_results[config.EFFECTS_TYPES["beta_1"]["model_results_key"]] = beta_1
 
     if (len(TT_col) > 0) and (any(col in coefficients for col in TT_col)):
@@ -1345,6 +1351,9 @@ def extract_model_results(
                 "CI_lower": float(coef_conf_intervals.loc[TT_, 0]),
                 "CI_upper": float(coef_conf_intervals.loc[TT_, 1]),
                 }
+        
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            delta_0 = remove_duplicates_from_dict(delta_0)
         
         model_results[config.EFFECTS_TYPES["delta_0"]["model_results_key"]] = delta_0
 
@@ -1377,6 +1386,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[AATE_, 1]),
                 }
             
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            AATE = remove_duplicates_from_dict(AATE)
+            
         model_results[config.EFFECTS_TYPES["AATE"]["model_results_key"]] = AATE
     
     if (len(ATT_col) > 0) and (any(col in coefficients for col in ATT_col)):
@@ -1394,6 +1406,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[ATT_, 1]),
                 }
                        
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            ATT = remove_duplicates_from_dict(ATT)
+            
         model_results[config.EFFECTS_TYPES["ATT"]["model_results_key"]] = ATT    
     
     if (len(spillover_vars) > 0) and (any(col in coefficients for col in spillover_vars)):
@@ -1411,6 +1426,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[spillover_var, 1]),
                 } 
                        
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            spillover_coef = remove_duplicates_from_dict(spillover_coef)
+            
         model_results[config.EFFECTS_TYPES["spillover"]["model_results_key"]] = spillover_coef
     
     fixed_effects = [
@@ -1435,6 +1453,9 @@ def extract_model_results(
                 "Coefficient_type": config.EFFECTS_TYPES["FE"]["types"][0]["description"]
                 }
             
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            FE_unit_coef = remove_duplicates_from_dict(FE_unit_coef)
+            
         fixed_effects[0] = {config.EFFECTS_TYPES["FE"]["types"][0]["model_results_key"]: FE_unit_coef}
     
     if (len(FE_time_vars) > 0) and (any(col in coefficients for col in FE_time_vars)):
@@ -1452,7 +1473,10 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[time_dummy, 1]),
                 "Coefficient_type": config.EFFECTS_TYPES["FE"]["types"][1]["description"]
                 }
-            
+        
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            FE_time_coef = remove_duplicates_from_dict(FE_time_coef)
+                    
         fixed_effects[1] = {config.EFFECTS_TYPES["FE"]["types"][1]["model_results_key"]: FE_time_coef}
         
     if (len(FE_group_vars) > 0) and (any(col in coefficients for col in FE_group_vars)):
@@ -1470,7 +1494,10 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[group_dummy, 1]),
                 "Coefficient_type": config.EFFECTS_TYPES["FE"]["types"][2]["description"]
                 }
-            
+        
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            FE_group_coef = remove_duplicates_from_dict(FE_group_coef)
+
         fixed_effects[2] = {config.EFFECTS_TYPES["FE"]["types"][2]["model_results_key"]: FE_group_coef}
 
     model_results[config.EFFECTS_TYPES["FE"]["model_results_key"]] = fixed_effects
@@ -1490,6 +1517,9 @@ def extract_model_results(
                 "CI_lower": float(coef_conf_intervals.loc[ITT_var, 0]),
                 "CI_upper": float(coef_conf_intervals.loc[ITT_var, 1]),
                 }      
+        
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            ITT_coef = remove_duplicates_from_dict(ITT_coef)
         
         model_results["individual_time_trends"] = ITT_coef
 
@@ -1516,6 +1546,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[ITE_var, 1]),
                 }            
             
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            ITE_coef = remove_duplicates_from_dict(ITE_coef)
+            
         model_results["individual_treatment_effects"] = ITE_coef
 
     if (len(GTT_vars) > 0) and (any(col in coefficients for col in GTT_vars)):
@@ -1534,6 +1567,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[GTT_var, 1]),
                 }      
         
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            GTT_coef = remove_duplicates_from_dict(GTT_coef)
+
         model_results["group_time_trends"] = GTT_coef
 
     if (len(GTE_vars) > 0) and (any(col in coefficients for col in GTE_vars)):
@@ -1558,6 +1594,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[GTE_var, 1]),
                 }      
         
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            GTE_coef = remove_duplicates_from_dict(GTE_coef)
+
         model_results["group_treatment_effects"] = GTE_coef
 
     if (len(covariates) > 0) and (any(col in coefficients for col in covariates)):
@@ -1577,6 +1616,9 @@ def extract_model_results(
                     "CI_lower": float(coef_conf_intervals.loc[covariate, 0]),
                     "CI_upper": float(coef_conf_intervals.loc[covariate, 1]),
                     }
+            
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            covariates_effects = remove_duplicates_from_dict(covariates_effects)
                 
         model_results["covariates_effects"] = covariates_effects    
 
@@ -1595,6 +1637,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[TG_x_BG_x_TT_, 1]),
                 }
         
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            TDATE = remove_duplicates_from_dict(TDATE)
+
         model_results = {config.EFFECTS_TYPES_DDD["TDATE"]["model_results_key"]: TDATE}
     
     if (len(BG_col) > 0) and (any(col in coefficients for col in BG_col)):
@@ -1612,6 +1657,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[BG_, 1]),
                 }            
 
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            BG = remove_duplicates_from_dict(BG)
+
         model_results[config.EFFECTS_TYPES_DDD["beta_2"]["model_results_key"]] = BG
         
     if (len(TG_x_BG_col) > 0) and (any(col in coefficients for col in TG_x_BG_col)):
@@ -1627,7 +1675,10 @@ def extract_model_results(
                 "p": float(coef_p[TG_x_BG_]),
                 "CI_lower": float(coef_conf_intervals.loc[TG_x_BG_, 0]),
                 "CI_upper": float(coef_conf_intervals.loc[TG_x_BG_, 1]),
-                }            
+                }
+            
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            TG_x_BG = remove_duplicates_from_dict(TG_x_BG)
 
         model_results[config.EFFECTS_TYPES_DDD["beta_4"]["model_results_key"]] = TG_x_BG
 
@@ -1646,6 +1697,9 @@ def extract_model_results(
                 "CI_upper": float(coef_conf_intervals.loc[BG_x_TT_, 1]),
                 }            
 
+        if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
+            BG_x_TT = remove_duplicates_from_dict(BG_x_TT)
+
         model_results[config.EFFECTS_TYPES_DDD["beta_6"]["model_results_key"]] = BG_x_TT
     
     if verbose:
@@ -1658,7 +1712,7 @@ def fit_metrics(
     outcome_col,
     model_predictions,
     indep_vars_no: int = None
-    ):
+    ) -> list:
 
     """
     Compute fit metrics for a model given data and predictions.
@@ -1704,7 +1758,7 @@ def fit_metrics(
 
     return fit_metrics_result
 
-def create_timestamp(function):
+def create_timestamp(function) -> dict:
 
     """
     Create a standard timestamp dictionary for logging or metadata.
@@ -1744,3 +1798,34 @@ def create_timestamp(function):
     }
 
     return timestamp_dict
+
+def remove_duplicates_from_dict(
+    any_dict: dict
+    ) -> dict:
+    
+    """
+    Remove duplicate values from a dictionary.
+
+    Parameters
+    ----------
+    any_dict : dict
+        Dictionary from which to remove duplicates.
+
+    Returns
+    -------
+    dict
+        Dictionary with unique values.
+    """
+    
+    any_dict_unique = {}
+    seen = set()
+
+    for key, value in any_dict.items():
+
+        identifier = tuple(sorted(value.items()))
+
+        if identifier not in seen:
+            seen.add(identifier)
+            any_dict_unique[key] = value
+
+    return any_dict_unique

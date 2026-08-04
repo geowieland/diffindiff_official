@@ -21,7 +21,7 @@ A case study that utilizes the diffindiff library is available on [arXiv](https:
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.3) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.4) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -156,6 +156,7 @@ See the /tests directory for usage examples of most of the included functions.
   - Goldfarb A, Tucker C, Wang Y (2022) Conducting Research in Marketing with Quasi-Experiments. *Journal of Marketing* 86(3): 1-19. [10.1177/00222429221082977](https://doi.org/10.1177/00222429221082977)
   - Isporhing IE, Lipfert M, Pestel N (2021) Does re-opening schools contribute to the spread of SARS-CoV-2? Evidence from staggered summer breaks in Germany. *Journal of Public Economics* 198: 104426. [10.1016/j.jpubeco.2021.104426](https://doi.org/10.1016/j.jpubeco.2021.104426)
   - Li KT, Luo L, Pattabhiramaiah A (2024) Causal Inference with Quasi-Experimental Data. *IMPACT at JMR* November 13, 2024. [AMA](https://www.ama.org/marketing-news/causal-inference-with-quasi-experimental-data/)
+  - Mitze T, Kosfeld R, Rode J, Wälde K (2020) Face masks considerably reduce COVID-19 cases in Germany. *Proceedings of the National Academy of Sciences of the United States of America* 117(51): 32293-32301. [10.1073/pnas.2015954117](https://doi.org/10.1073/pnas.2015954117)
   - Olden A (2018) What do you buy when no one's watching? The effect of self-service checkouts on the composition of sales in retail. Discussion paper FOR 3/18, Norwegian School of Economics, Norway. [http://hdl.handle.net/11250/2490886](http://hdl.handle.net/11250/2490886)
   - Olden A, Moen J (2022) The triple difference estimator. *The Econometrics Journal* 25(3): 531-553. [10.1093/ectj/utac010](https://doi.org/10.1093/ectj/utac010)
   - Strassmann A, Çolak Y, Serra-Burriel M, Nordestgaard BG, Turk A, Afzal S, Puhan MA (2023) Nationwide indoor smoking ban and impact on smoking behaviour and lung function: a two-population natural experiment. *Thorax* 78(2): 144-150. [10.1136/thoraxjnl-2021-218436](https://doi.org/10.1136/thoraxjnl-2021-218436)
@@ -171,9 +172,12 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.5.3)
+## What's new (v2.5.4)
 
-- Extensions
-  - Added optional saving of plots in DiffModel plot methods
 - Bugfixes
-  - Fixed typos in messages
+  - Correction of the nonsensical skipping of the treatment group dummy in the case of two observation units in didanalysis.did_analysis()
+  - Automatical drop of duplicates in results dictionaries in didanalysis_helper.extract_model_results()
+  - Inefficient successive data insert in diddata.DiffData.add_synthetic() replaced by efficient concatenating
+- Other
+  - Test script extended by another example
+  - Cleaned dependencies

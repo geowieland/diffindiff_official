@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.4
-# Last update: 2026-07-23 19:42
+# Version:     2.4.5
+# Last update: 2026-08-03 20:25
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -2512,7 +2512,7 @@ def did_analysis(
     unique_units = treatment_diagnostics_results[3]
     unique_time_points = treatment_diagnostics_results[4]
     
-    if no_treatments > 1:        
+    if no_treatments > 1 and unique_units >= config.FIXED_EFFECTS_THRESHOLD:        
         
         intercept = False
         TG_col = []        

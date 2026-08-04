@@ -4,16 +4,18 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.1.0
-# Last update: 2026-07-10 11:35
+# Version:     2.2.0
+# Last update: 2026-08-04 18:42
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
+
 
 """
 Please note that this tests script is a collection of examples for the use of most functions of the diffindiff package. 
 Although the data is real (i.e., non-simulated), no results relevant to the real world can be derived from it.
 """
 
+from pathlib import Path
 import pandas as pd
 from diffindiff.didanalysis import did_analysis
 from diffindiff.diddata import create_groups, create_treatment, merge_data, create_data
@@ -22,7 +24,11 @@ from diffindiff.diddata import create_groups, create_treatment, merge_data, crea
 # Example 1: Effect of a curfew in German counties in the first
 # wave of the COVID-19 pandemic (DiD pre-post analysis)
 
-curfew_DE=pd.read_csv("data/curfew_DE.csv", sep=";", decimal=",")
+curfew_DE = pd.read_csv(
+    Path(__file__).parent / "data" / "curfew_DE.csv",
+    sep=";",
+    decimal=","
+)
 # Dataset with daily and cumulative SARS-CoV-2 infections of German counties
 # Data source: Wieland (2020) https://doi.org/10.18335/region.v7i2.324
 
@@ -193,7 +199,12 @@ curfew_model_prepost_AT.plot(
 # Plot DiD pre vs. post results
 # with user-determined style
 
-counties_DE=pd.read_csv("data/counties_DE.csv", sep=";", decimal=",", encoding='latin1')
+counties_DE = pd.read_csv(
+    Path(__file__).parent / "data" / "counties_DE.csv",
+    sep=";",
+    decimal=",",
+    encoding='latin1'
+)
 # Dataset with German county data
 
 curfew_data_prepost_withcov = curfew_data_prepost.add_covariates(
@@ -405,7 +416,9 @@ curfew_model_extended.plot(
 # Example 3: Nighttime curfew and other NPI in Hesse
 # (Staggered adoption)
 
-Corona_Hesse=pd.read_excel("data/Corona_Hesse.xlsx")
+Corona_Hesse = pd.read_excel(
+    Path(__file__).parent / "data" / "Corona_Hesse.xlsx",
+)
 # Test data effective reproduction number and Corona NPI Hesse
 # Data source: Wieland (2025) https://doi.org/10.1007/s10389-024-02218-x
 
@@ -531,3 +544,74 @@ Hesse_model6=did_analysis(
 
 Hesse_model6.summary()
 # Model summary
+
+
+# Example 4: Mandatory face masks in Jena (Germany) during the first Corona wave
+# data: German counties during the first Corona wave
+
+facemasks_data=create_data(
+    outcome_data=curfew_DE,
+    unit_id_col="county",
+    time_col="infection_date",
+    outcome_col="infections_cum_per100000",
+    treatment_group= 
+        curfew_DE.loc[curfew_DE["REG_NAME"] == "Jena"]["county"],
+    control_group= 
+        curfew_DE.loc[curfew_DE["REG_NAME"] != "Jena"]["county"],
+    treatment_name="Mandatory face masks",
+    study_period=["2020-03-01", "2020-04-26"],
+    treatment_period=["2020-04-06", "2020-04-26"],
+    freq="D"
+    )
+# Creating DiD dataset by defining groups and treatment time at once
+# Treatment mandatory face masks in Jena beginning April 6, 2020 (first German city with mandatory face masks)
+
+facemasks_data.summary()
+# Summary of created treatment data
+
+facemasks_data_analysis = facemasks_data.analysis(
+    FE_unit=True,
+    FE_time=True,
+    intercept=False,
+    verbose=True
+    )
+# DiD analysis as two-way fixed effects model
+
+facemasks_data_analysis.summary()
+# Summary of model results
+
+
+facemasks_data_analysis_demean = facemasks_data.analysis(
+    FE_unit=True,
+    FE_time=True,
+    intercept=False,
+    demean=True,
+    verbose=True
+    )
+# DiD analysis as model with demeaened variables instead of fixed effects
+
+facemasks_data_analysis_demean.summary()
+# Summary of model results
+
+
+facemasks_data_synth = facemasks_data.add_synthetic(process_unit="Jena")
+# Add synthetic control for Jena
+
+facemasks_data_synth.summary()
+# Summary of synthetic DiD data
+
+print(facemasks_data_synth.get_synthetic_control_weightings())
+# Weights
+
+print(facemasks_data_synth.data[0].head)
+# Treatment unit with counterfactual (synthetic) control unit
+
+facemasks_data_synth_analysis = facemasks_data_synth.analysis(
+    FE_time=True,
+    log_outcome=True,
+    verbose=True
+    )
+# Synthetic DiD analysis 
+
+facemasks_data_synth_analysis.summary()
+# Summary of model results
