@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.5
-# Last update: 2026-08-03 20:25
+# Version:     2.4.6
+# Last update: 2026-09-11 21:46
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1875,8 +1875,12 @@ class DiffModel:
                 fig, ax = plt.subplots(figsize=(12, 6))
         else:
             fig, ax = plt.subplots(figsize=(plot_size[0], plot_size[1]))       
-    
-        model_data_TG_CG["t"] = pd.to_datetime(model_data_TG_CG["t"])
+
+        date_format = model_config["date_format"]
+        model_data_TG_CG["t"] = pd.to_datetime(
+            model_data_TG_CG["t"],
+            format = date_format
+            )
 
         if not model_config["pre_post"]:
             pre_post_barplot = False
@@ -2022,7 +2026,7 @@ class DiffModel:
             plt.xlabel(x_label)
             plt.ylabel(y_label)
             plt.title(plot_title)
-            ax.xaxis.set_major_formatter(DateFormatter(model_config["date_format"]))
+            ax.xaxis.set_major_formatter(DateFormatter(date_format))
 
         if model_config["pre_post"]:
 
@@ -2222,7 +2226,12 @@ class DiffModel:
             model_data_TG_mean_pred_counterfac.reset_index()
             ],
             axis = 1)
-        model_data_TG_mean[time_col] = pd.to_datetime(model_data_TG_mean[time_col])
+
+        date_format = model_config["date_format"]
+        model_data_TG_mean[time_col] = pd.to_datetime(
+            model_data_TG_mean[time_col],
+            format=date_format
+            )
 
         fig, ax = plt.subplots(figsize=(plot_size[0], plot_size[1]))   
         
@@ -2725,13 +2734,15 @@ def did_analysis(
         print(f"NOTE: Input is {config.MULTIPERIOD_PANELDATA_DESCRIPTION}. Consider including {config.EFFECTS_TYPES['FE']['description']}.")
         
     if log_outcome:
-        
-        if missing_replace_by_zero:
-            data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"] = np.log(data[outcome_col]+log_outcome_add)
-        
+
+        if any(data[outcome_col] <= 0):
+            data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"] = np.log(data[outcome_col]+log_outcome_add)        
         else:
             data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"] = np.log(data[outcome_col])
-        
+
+        if not np.isfinite(data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"]).all():
+            print(f"WARNING: Outcome column '{outcome_col}' in input data contains values <= 0, which is not fully compensated by log_outcome_add = {log_outcome_add}. This may lead to NaN Inf values in the log-transformed outcome. Consider using a larger constant for log_outcome_add.")
+
         outcome_col = f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"
 
     if not ITE and not GTE:
@@ -3320,12 +3331,14 @@ def ddd_analysis(
         pre_post = True
         
     if log_outcome:
-        
-        if missing_replace_by_zero:
-            data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"] = np.log(data[outcome_col]+log_outcome_add)
-        
+
+        if any(data[outcome_col] <= 0):
+            data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"] = np.log(data[outcome_col]+log_outcome_add)        
         else:
             data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"] = np.log(data[outcome_col])
+
+        if not np.isfinite(data[f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"]).all():
+            print(f"WARNING: Outcome column '{outcome_col}' in input data contains values <= 0, which is not fully compensated by log_outcome_add = {log_outcome_add}. This may lead to NaN Inf values in the log-transformed outcome. Consider using a larger constant for log_outcome_add.")
         
         outcome_col = f"{config.LOG_PREFIX}{config.DELIMITER}{outcome_col}"
 

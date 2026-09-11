@@ -21,7 +21,7 @@ A case study that utilizes the diffindiff library is available on [arXiv](https:
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.4) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.5) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -172,12 +172,8 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The Continue Agent in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.5.4)
+## What's new (v2.5.5)
 
 - Bugfixes
-  - Correction of the nonsensical skipping of the treatment group dummy in the case of two observation units in didanalysis.did_analysis()
-  - Automatical drop of duplicates in results dictionaries in didanalysis_helper.extract_model_results()
-  - Inefficient successive data insert in diddata.DiffData.add_synthetic() replaced by efficient concatenating
-- Other
-  - Test script extended by another example
-  - Cleaned dependencies
+  - didanalysis.did_analysis(): Correct usage of param 'log_outcome' in any case and check whether value of 'log_outcome_add' is appropriate
+  - didanalysis.DiffModel.plot() and didanalysis.DiffModel.plot_counterfactual(): Correct detection of the date format via object metadata
