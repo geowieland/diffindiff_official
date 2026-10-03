@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.5
-# Last update: 2026-07-23 19:34
+# Version:     2.2.6
+# Last update: 2026-10-03 11:02
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -22,11 +22,20 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPRegressor
+
+try:
+    from xgboost import XGBRegressor
+except ImportError:
+    XGBRegressor = None
+try:
+    from lightgbm import LGBMRegressor
+except ImportError:
+    LGBMRegressor = None
+
+
 import diffindiff.config as config
 
 
@@ -826,83 +835,105 @@ def is_parallel(
         treatment_col = treatment_col,
         verbose = False
         )
-    
-    if verbose:
-        print(f"Testing outcome '{outcome_col}' for parallel time trends", end = " ... ")
-    
-    if pre_post or not modeldata_isnotreatment:
-        parallel = "not_tested"
-        test_ols_model = None
-    
-    treatment_group = modeldata_isnotreatment[1]
 
-    if config.ACCEPT_CONTINUOUS_TREATMENTS:
+    parallel = "not_tested"
+    test_ols_model = None
+
+    if not pre_post:
+
+        no_pre_period = False
         
-        if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] > 0)]) > 0:
+        if verbose:
+            print(f"Testing outcome '{outcome_col}' for parallel time trends", end = " ... ")
         
-            first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] > 0)][time_col])
-            
-            data_test = data[data[time_col] < first_day_of_treatment].copy()
-            data_test[config.TG_COL] = 0
-            data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
-            
-            if config.TIME_COUNTER_COL not in data_test.columns:
-                data_test = date_counter(
-                    df = data_test,
-                    date_col = time_col, 
-                    new_col = config.TIME_COUNTER_COL,
-                    verbose = False
-                    )
-            data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]        
+        treatment_group = modeldata_isnotreatment[1]
 
-            test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
-            coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
+        if config.ACCEPT_CONTINUOUS_TREATMENTS:
+            
+            if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] > 0)]) > 0:
+            
+                first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] > 0)][time_col])
+                
+                data_test = data[data[time_col] < first_day_of_treatment].copy()
+                data_test[config.TG_COL] = 0
+                data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
+                
+                if config.TIME_COUNTER_COL not in data_test.columns:
+                    data_test = date_counter(
+                        df = data_test,
+                        date_col = time_col, 
+                        new_col = config.TIME_COUNTER_COL,
+                        verbose = False
+                        )
+                data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]
 
-            if coef_TG_x_t_p < alpha:
-                parallel = False
+                if len(data_test) > 0:
+
+                    test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
+                    coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
+
+                    if coef_TG_x_t_p < alpha:
+                        parallel = False
+                    else:
+                        parallel = True
+
+                else:
+                    no_pre_period = True
+            
             else:
-                parallel = True
-        
+                parallel = "not_tested"
+                test_ols_model = None
+            
         else:
-            parallel = "not_tested"
-            test_ols_model = None
+
+            if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)]) > 0:
+                
+                first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)][time_col])
+                
+                data_test = data[data[time_col] < first_day_of_treatment].copy()
+                data_test[config.TG_COL] = 0
+                data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
+                
+                if config.TIME_COUNTER_COL not in data_test.columns:
+                    data_test = date_counter(
+                        df = data_test,
+                        date_col = time_col, 
+                        new_col = config.TIME_COUNTER_COL,
+                        verbose = False
+                        )
+                data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]
+
+                if len(data_test) > 0:
+
+                    test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
+                    coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
+
+                    if coef_TG_x_t_p < alpha:
+                        parallel = False
+                    else:
+                        parallel = True
+
+                else:
+                    no_pre_period = True
+                
+            else:
+                parallel = "not_tested"
+                test_ols_model = None
         
+        if verbose:
+            print("OK")
+
+    if not pre_post:
+
+        if parallel == "not_tested":
+            print("WARNING: Data could not be tested for parallel time trends.")
+        if no_pre_period:
+            print("WARNING: Data could not be tested for parallel time trends because there is no pre-treatment period.")
+
     else:
 
-        if len(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)]) > 0:
-            
-            first_day_of_treatment = min(data[(data[unit_col].isin(treatment_group)) & (data[treatment_col] == 1)][time_col])
-            
-            data_test = data[data[time_col] < first_day_of_treatment].copy()
-            data_test[config.TG_COL] = 0
-            data_test.loc[data_test[unit_col].isin(treatment_group), config.TG_COL] = 1
-            
-            if config.TIME_COUNTER_COL not in data_test.columns:
-                data_test = date_counter(
-                    df = data_test,
-                    date_col = time_col, 
-                    new_col = config.TIME_COUNTER_COL,
-                    verbose = False
-                    )
-            data_test[f"{config.TG_COL}_x_{config.TIME_COL}"] = data_test[config.TG_COL]*data_test[config.TIME_COUNTER_COL]        
-
-            test_ols_model = ols(f'{outcome_col} ~ {config.TG_COL} + {config.TIME_COUNTER_COL} + {config.TG_COL}_x_{config.TIME_COL}', data = data_test).fit()
-            coef_TG_x_t_p = test_ols_model.pvalues[f"{config.TG_COL}_x_{config.TIME_COL}"]
-
-            if coef_TG_x_t_p < alpha:
-                parallel = False
-            else:
-                parallel = True
-            
-        else:
-            parallel = "not_tested"
-            test_ols_model = None
-    
-    if verbose:
-        print("OK")
-
-    if parallel == "not_tested":
-        print("WARNING: Data could not be tested for parallel time trends.")
+        if verbose:
+            print("NOTE: Data is pre-post data and parallel trends are not tested.")
       
     return [
         parallel, 
@@ -1549,18 +1580,28 @@ def model_wrapper(
             model = SVR(kernel=svr_kernel)
             
         elif model_type == "xgb":
-            model = XGBRegressor(
-                learning_rate = xgb_learning_rate,
-                n_estimators = gb_iterations,
-                random_state = random_state
-            )
+
+            if XGBRegressor is not None:
+                model = XGBRegressor(
+                    learning_rate = xgb_learning_rate,
+                    n_estimators = gb_iterations,
+                    random_state = random_state
+                )
+            else:
+                model_estimation_error = True
+                model_estimation_error_text = "XGBRegressor is not available. Please install xgboost to use this model type."
             
         elif model_type == "lgbm":
-            model = LGBMRegressor(
-                learning_rate = lgbm_learning_rate,
-                n_estimators = gb_iterations,
-                random_state = random_state
-            )
+
+            if LGBMRegressor is not None:
+                model = LGBMRegressor(
+                    learning_rate = lgbm_learning_rate,
+                    n_estimators = gb_iterations,
+                    random_state = random_state
+                )
+            else:
+                model_estimation_error = True
+                model_estimation_error_text = "LGBMRegressor is not available. Please install lightgbm to use this model type."
             
         elif model_type == "mlp":
             model = Pipeline(
