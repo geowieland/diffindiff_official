@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.2.4
-# Last update: 2026-08-04 17:35
+# Version:     1.2.5
+# Last update: 2026-10-09 23:04
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1085,33 +1085,47 @@ def ols_fit(
     >>> ols_fit(df, 'y ~ x')
     """
 
+    ols_model = None
+    ols_coef = None
+    ols_coef_se = None
+    ols_coef_t = None
+    ols_coef_p = None
+    ols_coef_ci = None
+    ols_predictions = None
+
     if verbose:
         print("Estimating model via Ordinary Least Squares", end = " ... ")  
     
-    if cluster_SE_by is not None:
+    try:
     
-        ols_model = ols(
-            formula, 
-            data=data
-            ).fit(
-                cov_type="cluster", 
-                cov_kwds={"groups": data[cluster_SE_by]} if cluster_SE_by else None
-                )
+        if cluster_SE_by is not None:
+        
+            ols_model = ols(
+                formula, 
+                data=data
+                ).fit(
+                    cov_type="cluster", 
+                    cov_kwds={"groups": data[cluster_SE_by]} if cluster_SE_by else None
+                    )
 
-    else:
+        else:
+            
+            ols_model = ols(formula, data).fit()
+            
+        ols_coef = ols_model.params
+        ols_coef_se = ols_model.bse
+        ols_coef_t = ols_model.tvalues
+        ols_coef_p = ols_model.pvalues
+        ols_coef_ci = ols_model.conf_int(alpha = confint_alpha)
         
-        ols_model = ols(formula, data).fit()
+        ols_predictions = ols_model.get_prediction(data).summary_frame(alpha=confint_alpha)
         
-    ols_coef = ols_model.params
-    ols_coef_se = ols_model.bse
-    ols_coef_t = ols_model.tvalues
-    ols_coef_p = ols_model.pvalues
-    ols_coef_ci = ols_model.conf_int(alpha = confint_alpha)
-    
-    ols_predictions = ols_model.get_prediction(data).summary_frame(alpha=confint_alpha)
-    
-    if verbose:
-        print("OK")
+        if verbose:
+            print("OK")
+
+    except RecursionError as e:
+
+        raise ValueError(f"OLS estimation has induced a RecursionError: {str(e)}. There are likely too many variables in the model. Try sys.setrecursionlimit() or diff-in-diff analysis with demean = True")
     
     return [
         ols_model,
@@ -1160,26 +1174,32 @@ def ml_fit(
 
     if verbose:
         print("Estimating model via Maximum Likelihood", end = " ... ")  
-    
-    y, X = dmatrices(
-        formula, 
-        data=data, 
-        return_type = "dataframe"
-        )
 
-    mle_model = sm.GLM(
-        y, 
-        X, 
-        family=family(link=link)
-        ).fit()
-
-    mle_coef = mle_model.params
-    mle_coef_se = mle_model.bse
-    mle_coef_z = mle_model.tvalues
-    mle_coef_p = mle_model.pvalues
-    mle_coef_ci = mle_model.conf_int(alpha=confint_alpha)
+    try:
     
-    mle_predictions = mle_model.get_prediction(X).summary_frame(alpha=confint_alpha)
+        y, X = dmatrices(
+            formula, 
+            data=data, 
+            return_type = "dataframe"
+            )
+
+        mle_model = sm.GLM(
+            y, 
+            X, 
+            family=family(link=link)
+            ).fit()
+
+        mle_coef = mle_model.params
+        mle_coef_se = mle_model.bse
+        mle_coef_z = mle_model.tvalues
+        mle_coef_p = mle_model.pvalues
+        mle_coef_ci = mle_model.conf_int(alpha=confint_alpha)
+        
+        mle_predictions = mle_model.get_prediction(X).summary_frame(alpha=confint_alpha)
+
+    except RecursionError as e:
+
+        raise ValueError(f"ML estimation has induced a RecursionError: {str(e)}. There are likely too many variables in the model. Try sys.setrecursionlimit() or diff-in-diff analysis with demean = True")
 
     if verbose:
         print("OK")
@@ -1333,7 +1353,7 @@ def extract_model_results(
                 }
                         
         if config.REMOVE_DUPLICATES_FROM_RESULTS_DICT:
-            beta_1 = remove_duplicates_from_dict(beta_1)
+            beta_1 = remove_duplicates_from_dict(beta_1, ignore_key=config.OLS_MODEL_RESULTS["coef_name"]["model_results_key"])
             
         model_results[config.EFFECTS_TYPES["beta_1"]["model_results_key"]] = beta_1
 
@@ -1800,7 +1820,8 @@ def create_timestamp(function) -> dict:
     return timestamp_dict
 
 def remove_duplicates_from_dict(
-    any_dict: dict
+    any_dict: dict,
+    ignore_key = None
     ) -> dict:
     
     """
@@ -1822,7 +1843,13 @@ def remove_duplicates_from_dict(
 
     for key, value in any_dict.items():
 
-        identifier = tuple(sorted(value.items()))
+        if ignore_key is not None:
+            identifier = tuple(sorted(
+                (k, v) for k, v in value.items()
+                if k != ignore_key
+            ))
+        else:
+            identifier = tuple(sorted(value.items()))
 
         if identifier not in seen:
             seen.add(identifier)

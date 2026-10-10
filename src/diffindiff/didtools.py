@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.6
-# Last update: 2026-10-03 11:02
+# Version:     2.2.7
+# Last update: 2026-10-10 09:57
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -46,7 +46,8 @@ def check_columns(
     ):
 
     """
-    Check that the given columns exist in a DataFrame.
+    Check that the given columns exist in a DataFrame
+    and whether there are duplicated column names.
 
     Parameters
     ----------
@@ -65,6 +66,8 @@ def check_columns(
     ------
     KeyError
         If any column from ``columns`` is missing in ``df``.
+    KeyError
+        If any column from ``columns`` is duplicated.
 
     Examples
     --------
@@ -85,6 +88,17 @@ def check_columns(
         
         if missing_columns:
             raise KeyError(f"Data do not contain column(s): {', '.join(missing_columns)}")
+
+        if verbose:
+            print("Checking whether columns are duplicated in data frame", end = " ... ")
+
+        cols_duplicated = df.columns[df.columns.duplicated()].tolist()
+
+        if verbose:
+            print("OK")
+
+        if len(cols_duplicated) > 0:
+            raise KeyError(f"Data contain duplicated relevant columns: {', '.join(cols_duplicated)}")
 
 def is_numeric(
     df: pd.DataFrame, 
