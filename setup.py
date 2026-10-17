@@ -7,7 +7,7 @@ def read_README():
     
 setup(
     name='diffindiff',
-    version='2.5.7',
+    version='2.5.8',
     description='diffindiff: Python library for convenient Difference-in-Differences analyses',
     packages=find_packages(where="src"),
     package_dir={"": "src"},
@@ -36,5 +36,5 @@ setup(
         'xgboost',
         ]
     },
-    test_suite='diffindiff.tests',
+    test_suite='tests',
 )

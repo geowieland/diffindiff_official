@@ -14,14 +14,14 @@ Thomas Wieland [ORCID](https://orcid.org/0000-0001-5168-9846) [EMail](mailto:geo
 - 💻 GitHub Repository: [diffindiff_official](https://github.com/geowieland/diffindiff_official)
 - 📄 DOI (Zenodo): [10.5281/zenodo.18656820](https://doi.org/10.5281/zenodo.18656820)
 
-A case study that utilizes the diffindiff library is available on [arXiv](https://arxiv.org/abs/2605.21464).
+A case study that utilizes the diffindiff library (preprint) is available on [arXiv](https://arxiv.org/abs/2605.21464).
 
 
 ## Citation
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.7) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.8) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -172,9 +172,12 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The GitHub Copilot Chat in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.5.7)
+## What's new (v2.5.8)
 
 - Bugfixes
-  - Catching RecursionError when model formulas include too many variables
-  - Checking input data frames for duplicated columns
-  - Avoiding treatment group deviation in summary when treatment/control groups are identical
+  - didtools.is_balanced() now conducts a truly comprehensive check whether the input panel data is balanced
+  - Fixed bug in didtools.is_numeric() with respect to unintentional modification of the dataset
+  - diddata.create_counterfactual() now catches error if no model was trained by didtools.model_wrapper()
+  - didanalysis.DiffModel.plot_treatment_effects() now treats expections correctly
+- Other:
+  - verbose option in any function which prints NOTEs, with all NOTEs being disabled when verbose = False

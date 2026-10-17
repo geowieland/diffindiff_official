@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.3
-# Last update: 2026-08-04 17:51
+# Version:     2.3.4
+# Last update: 2026-10-17 21:34
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1763,7 +1763,7 @@ class DiffData:
         TT_col = treatment_cols[0]["TT_col"]
         treatment_name = treatment_cols[0]["treatment_name"]
 
-        if len(treatment_cols) > 1:
+        if len(treatment_cols) > 1 and verbose:
             print(f"NOTE: Treatment data contains {len(treatment_cols)} treatments. Taking first treatment '{treatment_name}' for identifying treatment group and time.")
         
         if verbose:
@@ -1853,9 +1853,8 @@ class DiffData:
         self.data[1] = groups
 
         if verbose:
-            print("OK")
-        
-        print("NOTE: DiffData object was changed with counterfactual.")
+            print("OK")        
+            print("NOTE: DiffData object was changed with counterfactual.")
 
         return self
 
@@ -1926,7 +1925,7 @@ class DiffData:
         treatment_name = treatment_cols[0]["treatment_name"]
         TG_col = treatment_cols[0]["TG_col"]
         
-        if len(treatment_cols) > 1:
+        if len(treatment_cols) > 1 and verbose:
             print(f"NOTE: Treatment data contains {len(treatment_cols)} treatments. Taking first treatment '{treatment_name}' for identifying treatment group and time.")
         
         if verbose:
@@ -2014,7 +2013,7 @@ class DiffData:
         units = valid_units
 
         if len(units_not_included) > 0:
-            print(f"WARNING: {len(units_not_included)} analysis units were not included due to NaN data.")
+            print(f"WARNING: {len(units_not_included)} analysis units were not included due to NaN values.")
 
         if verbose:
             print("OK")
@@ -2863,7 +2862,7 @@ def create_counterfactual(
     data_len = len(data)
     data = data.dropna()
     if len(data) < data_len:
-        print(f"NOTE: Because of NaN values, {data_len-len(data)} observations were skipped.")
+        print(f"WARNING: Because of NaN values, {data_len-len(data)} observations were skipped.")
 
     isnotreatment = tools.is_notreatment(
         data = data,
@@ -2871,7 +2870,7 @@ def create_counterfactual(
         treatment_col = treatment_col,
         verbose = verbose
         )
-    if not isnotreatment[0]:
+    if not isnotreatment[0] and verbose:
         print(f"NOTE: No {config.NO_TREATMENT_CG_DESCRIPTION}. Counterfactual will not cover full treatment time.")    
     
     data_unit = data.loc[data[unit_col].astype(str) == cf_for_unit]
@@ -2897,7 +2896,7 @@ def create_counterfactual(
     units = tools.unique(units_tt[unit_col])  
     
     if not isnotreatment[0]:
-        print(f"NOTE: No {config.TREATMENT_GROUP_DESCRIPTION} units in model data left.")
+        print(f"WARNING: No {config.TREATMENT_GROUP_DESCRIPTION} units in model data left.")
     
     if verbose:
         print(f"Creating data for counterfactual with {len(X)} independent variables", end = " ... ")
@@ -2958,18 +2957,30 @@ def create_counterfactual(
         random_state = random_state,
         verbose = verbose
         )
-    
-    if verbose:
-        print(f"Counterfactual prediction for observational unit '{cf_for_unit}'", end = " ... ")
-    
-    data_unit[treatment_col] = 0
-    data_unit[y] = counterfactual_pred[1].predict(data_unit[X])
-    
-    if verbose:
-        print("OK")
+
+    model_estimation_error = counterfactual_pred[6]
+    model_estimation_error_text = ""
+
+    if model_estimation_error:
+
+        model_estimation_error_text = counterfactual_pred[7]
+        print(f"WARNING: The desired {config.MODEL_WRAPPER_AVAILABLE[model_type]} model was not estimated. The following error occurred: '{model_estimation_error_text}'.")
+
+    else:
+
+        if verbose:
+            print(f"Counterfactual prediction for observational unit '{cf_for_unit}'", end = " ... ")
+        
+        data_unit[treatment_col] = 0
+        data_unit[y] = counterfactual_pred[1].predict(data_unit[X])
+        
+        if verbose:
+            print("OK")
     
     return [
         counterfactual_pred, 
         data_cf, 
-        data_unit
+        data_unit,
+        model_estimation_error,
+        model_estimation_error_text
         ]

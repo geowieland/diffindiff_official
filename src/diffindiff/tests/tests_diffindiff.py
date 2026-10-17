@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.0
-# Last update: 2026-08-04 18:42
+# Version:     2.2.1
+# Last update: 2026-10-17 14:50
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -305,7 +305,6 @@ curfew_model_FE.plot(
 
 fixed_effects = curfew_model_FE.fixed_effects()
 # Fixed effects of CHBW_data_model_FE
-#print(fixed_effects)
 
 
 # Model with demeaned variables:

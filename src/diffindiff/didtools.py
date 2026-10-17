@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.7
-# Last update: 2026-10-10 09:57
+# Version:     2.2.8
+# Last update: 2026-10-17 18:53
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -77,6 +77,8 @@ def check_columns(
     """
 
     if len(columns) > 0:
+
+        key_errors = []
         
         if verbose:
             print(f"Checking if column(s) {', '.join(columns)} exist(s) in data frame", end=" ... ")
@@ -87,7 +89,7 @@ def check_columns(
             print("OK")
         
         if missing_columns:
-            raise KeyError(f"Data do not contain column(s): {', '.join(missing_columns)}")
+            key_errors.append(f"Data do not contain column(s): {', '.join(missing_columns)}")
 
         if verbose:
             print("Checking whether columns are duplicated in data frame", end = " ... ")
@@ -98,7 +100,10 @@ def check_columns(
             print("OK")
 
         if len(cols_duplicated) > 0:
-            raise KeyError(f"Data contain duplicated relevant columns: {', '.join(cols_duplicated)}")
+            key_errors.append(f"Data contain duplicated relevant columns: {', '.join(cols_duplicated)}")
+
+        if len(key_errors) > 0:
+            raise KeyError(f"{' '.join(key_errors)}")
 
 def is_numeric(
     df: pd.DataFrame, 
@@ -133,6 +138,8 @@ def is_numeric(
     >>> df = pd.DataFrame({'x':[1,2]})
     >>> is_numeric(df, ['x'])
     """
+
+    df = df.copy()
 
     if len(columns) > 0:
         
@@ -266,32 +273,41 @@ def is_balanced(
     if other_cols is None:
         other_cols = []
 
+    cols_relevant = [unit_col, time_col, outcome_col] + other_cols
+
     if verbose:
-        print(f"Checking whether panel data is balanced with respect to {3+len(other_cols)} columns", end = " ... ")
+        print(f"Checking whether panel data is balanced with respect to {len(cols_relevant)} columns", end = " ... ")
 
-    unit_freq = data[unit_col].nunique()
-    time_freq = data[time_col].nunique()
-    unitxtime = unit_freq*time_freq
+    panel = data[cols_relevant].copy()
 
-    if other_cols is None:
-        cols_relevant = [unit_col, time_col, outcome_col]
-    else:
-        cols_relevant = [unit_col, time_col, outcome_col] + other_cols
+    warnings = []
 
-    data_relevant = data[cols_relevant]
-    
-    if unitxtime != len(data_relevant.notna()):
-        balanced = False
-    else:
-        balanced = True
-    
+    if panel.isnull().any().any():
+        warnings.append("Relevant columns contain missing values.")
+        
+    pair_counts = panel[[unit_col, time_col]].dropna().groupby([unit_col, time_col]).size()
+    if (pair_counts != 1).any():
+        warnings.append("Unit-time pairs are duplicated or incomplete.")
+
+    units = panel[unit_col].dropna().unique()
+    times = panel[time_col].dropna().unique()
+    expected_pairs = set((u, t) for u in units for t in times)
+    observed_pairs = set(pair_counts.index.tolist())
+    if observed_pairs != expected_pairs:
+        warnings.append("Some unit-time combinations are missing.")
+        
     if verbose:
         print("OK")
 
-    if not balanced:
-        print("WARNING: Panel data is not balanced.")
-        
-    return balanced
+    if len(warnings) > 0:
+
+        if verbose:
+            print(f"WARNING: {' '.join(warnings)}")
+
+        return False
+    
+    else:
+        return True
 
 def is_dummy(
     iterable,
@@ -562,7 +578,7 @@ def is_simultaneous(
         if verbose:
             print("OK")
 
-        if not simultaneous and data_isnotreatment[0]:
+        if not simultaneous and data_isnotreatment[0] and verbose:
             print(f"NOTE: Treatment '{treatment_col}' is not simultaneous.")
 
         if simultaneous and not data_isnotreatment[0]:
@@ -621,8 +637,8 @@ def is_notreatment(
     if verbose:
         print("OK")
 
-        if not no_treatment:
-            print(f"NOTE: treatment '{treatment_col}' does not include a {config.NO_TREATMENT_CG_DESCRIPTION}.")
+    if not no_treatment:
+        print(f"WARNING: treatment '{treatment_col}' does not include a {config.NO_TREATMENT_CG_DESCRIPTION}.")
 
     return [
         no_treatment, 
@@ -1708,7 +1724,9 @@ def model_wrapper(
             X_test, 
             y_train, 
             y_test
-        )
+        ),
+        model_estimation_error,
+        model_estimation_error_text
         ]
 
 def fit_metrics(
@@ -1824,8 +1842,7 @@ def fit_metrics(
  
     if any(observed == 0):
         
-        if verbose:
-            print ("NOTE: Vector 'observed' contains values equal to zero. No APE/MAPE calculated.")
+        print ("WARNING: Vector 'observed' contains values equal to zero. No APE/MAPE calculated.")
         
         APE = np.full_like(observed, np.nan)
         MAPE = np.nan

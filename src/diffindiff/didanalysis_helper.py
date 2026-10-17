@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.2.5
-# Last update: 2026-10-09 23:04
+# Version:     1.2.6
+# Last update: 2026-10-17 18:55
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -231,8 +231,8 @@ def demean_variables(
     suffix = f"{config.DELIMITER}{config.DEMEAN_SUFFIX}"
 
     if not FE_unit and not FE_time:
-        
-        print("NOTE: Neither 'FE_unit' nor 'FE_time' is set to True. No demeaning will be performed.")
+
+        print("WARNING: Neither 'FE_unit' nor 'FE_time' is set to True. No demeaning will be performed.")
         
         for col in cols_to_demean:
 
@@ -258,13 +258,13 @@ def demean_variables(
     else:
         
         tools.check_columns(
-            df = data,
+            df = data_demean,
             columns = cols_to_demean + [unit_col] + [time_col],
             verbose = verbose
             )
                 
         tools.is_numeric(
-            df = data,
+            df = data_demean,
             columns = cols_to_demean,
             verbose = verbose
             )

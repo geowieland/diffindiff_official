@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.6
-# Last update: 2026-09-11 21:46
+# Version:     2.4.8
+# Last update: 2026-10-17 21:15
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -111,7 +111,8 @@ class DiffModel:
     def treatment_statistics(
         self,
         treatment: str = None,
-        after_treatment_col: str = None
+        after_treatment_col: str = None,
+        verbose: bool = False
         ):
 
         """
@@ -163,7 +164,9 @@ class DiffModel:
         else:
             
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for calculating treatment statistics.")
+
+            if verbose:
+                print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for calculating treatment statistics.")
 
         if after_treatment_col is not None:
             
@@ -782,9 +785,9 @@ class DiffModel:
       
         if len(no_control_conditions) > 0:
             if len(no_control_conditions) == 1:
-                print(f"NOTE: Treatment '{no_control_conditions[0]}' has no control conditions.")
+                print(f"WARNING: Treatment '{no_control_conditions[0]}' has no control conditions.")
             else:
-                print(f"NOTE: Treatments {', '.join(no_control_conditions)} have no control conditions.")  
+                print(f"WARNING: Treatments {', '.join(no_control_conditions)} have no control conditions.")  
 
         print("-" * int(total_width))        
 
@@ -905,6 +908,7 @@ class DiffModel:
         treatment_effects = self.treatment_effects()
 
         try:
+
             if model_config.get("pre_post", False) and len(model_config.get("after_treatment_col", [])) > 0:
 
                 labels = treatment_effects.iloc[:, 0].astype(str).values
@@ -943,9 +947,11 @@ class DiffModel:
                                     break
                         if appended:
                             break
-        except Exception:
+        except Exception as e:
 
-            pass
+            print(f"Plot of treatment effects not possible: {str(e)}")
+
+            return self
 
         if sort_by_coef:
             treatment_effects = treatment_effects.sort_values(
@@ -1099,7 +1105,8 @@ class DiffModel:
         self,
         treatment = None,
         after_treatment_col: str = None,
-        retransform_log_outcome: bool = False
+        retransform_log_outcome: bool = False,
+        verbose: bool = False
         ):
         
         """
@@ -1153,8 +1160,11 @@ class DiffModel:
             if treatment not in model_config["treatment_col"]:
                 raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
+            
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for calculating counterfactual.")
+            
+            if verbose:
+                print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for calculating counterfactual.")
 
         if after_treatment_col is not None:
             if len(model_config["after_treatment_col"]) == 0:
@@ -1313,7 +1323,8 @@ class DiffModel:
         TT_col: str = None,
         divide: float = 0.5,
         resample: float = 1.0,
-        random_state = 71
+        random_state = 71,
+        verbose: bool = False
         ):
 
         """
@@ -1369,8 +1380,11 @@ class DiffModel:
             if treatment not in model_config["treatment_col"]:
                 raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
+            
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for placebo analysis.")
+            
+            if verbose:
+                print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for placebo analysis.")
 
         if after_treatment_col is not None:
             if len(model_config["after_treatment_col"]) == 0:
@@ -1390,7 +1404,8 @@ class DiffModel:
             treatment_demeaned = treatment
             treatment = treatment.replace(f"{config.DELIMITER}{config.DEMEAN_SUFFIX}", "")
 
-            print(f"NOTE: Data is demeaned. Treatment statistics are calculated based on original treatment '{treatment}'.")
+            if verbose:
+                print(f"NOTE: Data is demeaned. Treatment statistics are calculated based on original treatment '{treatment}'.")
        
         treatment_statistics = self.treatment_statistics(treatment = treatment)
 
@@ -1484,7 +1499,8 @@ class DiffModel:
         plot_symbol: str = "o",
         treatment_group_only: bool = True,
         save_fig: str = None,
-        save_fig_kwargs: dict = {}
+        save_fig_kwargs: dict = {},
+        verbose: bool = False
         ):
 
         """
@@ -1542,8 +1558,11 @@ class DiffModel:
             if treatment not in model_config["treatment_col"]:
                 raise ValueError (f"Treatment '{treatment}' not in model object.")
         else:
+            
             treatment = model_config["treatment_col"][0]
-            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for plotting timeline.")
+            
+            if verbose:
+                print(f"NOTE: No treatment was stated. Choosing treatment '{treatment}' for plotting timeline.")
                 
         if treatment_group_only:
             if TG_col is None:
@@ -1615,7 +1634,8 @@ class DiffModel:
         pre_post_bar_width = 0.5,
         retransform_log_outcome: bool = False,
         save_fig: str = None,
-        save_fig_kwargs: dict = {}
+        save_fig_kwargs: dict = {},
+        verbose: bool = False
         ):
 
         """
@@ -1723,7 +1743,8 @@ class DiffModel:
                     break                        
         else:
             
-            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment_diagnostics[0]['treatment']}' for plotting.")
+            if verbose:
+                print(f"NOTE: No treatment was stated. Choosing treatment '{treatment_diagnostics[0]['treatment']}' for plotting.")
 
             treatment_group = treatment_diagnostics[0]["treatment_group"]            
             treatment = treatment_diagnostics[0]["treatment"]
@@ -1783,13 +1804,15 @@ class DiffModel:
                 model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[4]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[4]])
                 model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[5]] = np.exp(model_data[config.PREDICTIONS_SUMMARY_FRAME_COLS_LIST[5]])
                 
-                if model_config["demean"]:
-                    print(f"NOTE: Outcome variable '{outcome_col.replace(f'{config.DELIMITER}{config.DEMEAN_SUFFIX}', '')}' was log-transformed and demeaned. Re-transformation was applied on '{outcome_col}'.")
-                else:
-                    print(f"NOTE: Outcome variable '{outcome_col}' was log-transformed. Re-transformation was applied.")
+                if verbose:
+                    if model_config["demean"]:
+                        print(f"NOTE: Outcome variable '{outcome_col.replace(f'{config.DELIMITER}{config.DEMEAN_SUFFIX}', '')}' was log-transformed and demeaned. Re-transformation was applied on '{outcome_col}'.")
+                    else:
+                        print(f"NOTE: Outcome variable '{outcome_col}' was log-transformed. Re-transformation was applied.")
             
             else:
-                print("NOTE: Parameter 'retransform_log_outcome' was set to True, but outcome variable was not log-transformed. No re-transformation applied.")
+                if verbose:
+                    print("NOTE: Parameter 'retransform_log_outcome' was set to True, but outcome variable was not log-transformed. No re-transformation applied.")
         
         model_data_TG = model_data[model_data[TG_col] == 1]
         model_data_CG = model_data[model_data[TG_col] == 0]
@@ -2096,7 +2119,8 @@ class DiffModel:
         plot_size: list = [12, 6],
         retransform_log_outcome: bool = False,
         save_fig: str = None,
-        save_fig_kwargs: dict = {}
+        save_fig_kwargs: dict = {},
+        verbose: bool = False
         ):
 
         """
@@ -2199,7 +2223,9 @@ class DiffModel:
                     break
     
         else:
-            print(f"NOTE: No treatment was stated. Choosing treatment '{treatment_diagnostics[0]['treatment']}' for plotting counterfactual.")
+
+            if verbose:
+                print(f"NOTE: No treatment was stated. Choosing treatment '{treatment_diagnostics[0]['treatment']}' for plotting counterfactual.")
 
             treatment_group = treatment_diagnostics[0]["treatment_group"]
 
@@ -2527,8 +2553,11 @@ def did_analysis(
         TG_col = []        
         
         if not FE_unit and config.AUTO_SWITCH_TO_FIXED_EFFECTS:
+
             FE_unit = True
-            print(f"NOTE: Quasi-experiment includes more than one treatment ({no_treatments}). Unit fixed effects are used instead of control group baseline and treatment group deviation.")
+            
+            if verbose:
+                print(f"NOTE: Quasi-experiment includes more than one treatment ({no_treatments}). Unit fixed effects are used instead of control group baseline and treatment group deviation.")
     
     if unique_units < config.FIXED_EFFECTS_THRESHOLD:
         
@@ -2538,7 +2567,8 @@ def did_analysis(
         ITT = False
         intercept = True
         
-        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} units. Unit or group fixed effects are skipped.")
+        if verbose:
+            print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} units. Unit or group fixed effects are skipped.")
         
     if unique_time_points < config.FIXED_EFFECTS_THRESHOLD:
         
@@ -2547,7 +2577,8 @@ def did_analysis(
         GTT = False
         intercept = True
         
-        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} time points. Time fixed effects are skipped.")
+        if verbose:
+            print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} time points. Time fixed effects are skipped.")
     
     if demean and FE_unit:
         
@@ -2556,38 +2587,56 @@ def did_analysis(
             ITE = False
             ITT = False
             
-            print(f"NOTE: Unit fixed effects are specified to be replaced by demeaning. {config.EFFECTS_TYPES['ITE']['description']} or {config.EFFECTS_TYPES['ITT']['description']} are not supported.")
+            if verbose:
+                print(f"NOTE: Unit fixed effects are specified to be replaced by demeaning. {config.EFFECTS_TYPES['ITE']['description']} or {config.EFFECTS_TYPES['ITT']['description']} are not supported.")
                        
     if ITE:
         
         if not FE_unit:
+
             FE_unit = True
-            print("NOTE: Model includes individual treatment effects. Unit fixed effects are included.")
+            
+            if verbose:
+                print("NOTE: Model includes individual treatment effects. Unit fixed effects are included.")
         
         if GTE:
+
             GTE = False
-            print("NOTE: Both group and individual treatment effects were stated. Switching to individual treatment effects only.")
+            
+            if verbose:
+                print("NOTE: Both group and individual treatment effects were stated. Switching to individual treatment effects only.")
     
     if ITT:
         
         TT_col = []
         
         if not FE_unit:
+
             FE_unit = True
-            print("NOTE: Model includes individual time trends. Unit fixed effects are included. Treatment time variable is dropped.")
+            
+            if verbose:
+                print("NOTE: Model includes individual time trends. Unit fixed effects are included. Treatment time variable is dropped.")
         
         if FE_time:
+            
             FE_time = False
-            print("NOTE: Model includes individual time trends. Time fixed effects are dropped.")
+            
+            if verbose:
+                print("NOTE: Model includes individual time trends. Time fixed effects are dropped.")
         
         if GTT:
+
             GTT = False
-            print("NOTE: Both group and individual time trends were stated. Switching to individual time trends only.")
+            
+            if verbose:
+                print("NOTE: Both group and individual time trends were stated. Switching to individual time trends only.")
             
     if staggered_adoption and config.AUTO_SWITCH_TO_FIXED_EFFECTS:
         
         if not FE_unit or not FE_time:
-            print("NOTE: Quasi-experiment includes one or more staggered treatments. Two-way fixed effects model is used.")
+
+            if verbose:
+                print("NOTE: Quasi-experiment includes one or more staggered treatments. Two-way fixed effects model is used.")
             
         FE_unit = True
         FE_time = True      
@@ -2604,7 +2653,9 @@ def did_analysis(
     if FE_group:
         
         if intercept or len(TG_col) > 0:
-            print("NOTE: Quasi-experiment includes group fixed effects. Control group baseline and treatment group deviation are dropped.")   
+
+            if verbose:
+                print("NOTE: Quasi-experiment includes group fixed effects. Control group baseline and treatment group deviation are dropped.")   
 
         TG_col = []
         intercept = False
@@ -2716,13 +2767,14 @@ def did_analysis(
         
         if config.AUTO_SKIP_CONSTANT_COLUMNS:
         
-            print(f"NOTE: The following columns are constant and dropped from the analysis: {', '.join(data_diagnostics['cols_constants'])}.")
+            print(f"WARNING: The following columns are constant and dropped from the analysis: {', '.join(data_diagnostics['cols_constants'])}.")
             
             covariates = [col for col in covariates if col not in data_diagnostics["cols_constants"]]
 
     if data_diagnostics["is_prepost"] and config.AUTO_SWITCH_TO_PREPOST:
         
-        print(f"NOTE: Input is {config.PREPOST_PANELDATA_DESCRIPTION}. Data processing and model estimation will treat data as pre-post.")
+        if verbose:
+            print(f"NOTE: Input is {config.PREPOST_PANELDATA_DESCRIPTION}. Data processing and model estimation will treat data as pre-post.")
         
         pre_post = True
         
@@ -2730,8 +2782,8 @@ def did_analysis(
         FE_time = False
         FE_group = False
     
-    if not data_diagnostics["is_prepost"] and not FE_unit and not FE_time:
-        print(f"NOTE: Input is {config.MULTIPERIOD_PANELDATA_DESCRIPTION}. Consider including {config.EFFECTS_TYPES['FE']['description']}.")
+    if not data_diagnostics["is_prepost"] and not FE_unit and not FE_time:        
+        print(f"WARNING: Input is {config.MULTIPERIOD_PANELDATA_DESCRIPTION}. Consider including {config.EFFECTS_TYPES['FE']['description']}.")
         
     if log_outcome:
 
@@ -2999,9 +3051,8 @@ def did_analysis(
         indep_vars_no = indep_vars_no-(len(FE_unit_vars)+len(FE_time_vars))
             
         if verbose:
-            print("OK")
-        
-        print(f"NOTE: Outcome variable '{outcome_col}' is replaced by demeaned variable '{outcome_col_demeaned}', and {len(treatment_col)+len(covariates)+len(spillover_vars)+len(interactions)} other variables were remeaned.")
+            print("OK")        
+            print(f"NOTE: Outcome variable '{outcome_col}' is replaced by demeaned variable '{outcome_col_demeaned}', and {len(treatment_col)+len(covariates)+len(spillover_vars)+len(interactions)} other variables were remeaned.")
         
         outcome_col = outcome_col_demeaned    
         
@@ -3283,13 +3334,15 @@ def ddd_analysis(
         
         FE_unit = False
           
-        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} units. Unit fixed effects are skipped.")
+        if verbose:
+            print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} units. Unit fixed effects are skipped.")
         
     if unique_time_points < config.FIXED_EFFECTS_THRESHOLD:
         
         FE_time = False
         
-        print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} time points. Time fixed effects are skipped.")
+        if verbose:
+            print(f"NOTE: Quasi-experiment includes less than {config.FIXED_EFFECTS_THRESHOLD} time points. Time fixed effects are skipped.")
                 
     if FE_unit:
         TG_col = None
@@ -3320,13 +3373,14 @@ def ddd_analysis(
         
         if config.AUTO_SKIP_CONSTANT_COLUMNS:
             
-            print(f"NOTE: The following columns are constant and dropped from the analysis: {', '.join(data_diagnostics['cols_constants'])}.")
+            print(f"WARNING: The following columns are constant and dropped from the analysis: {', '.join(data_diagnostics['cols_constants'])}.")
             
             covariates = [col for col in covariates if col not in data_diagnostics["cols_constants"]]
     
     if data_diagnostics["is_prepost"] and config.AUTO_SWITCH_TO_PREPOST:
         
-        print("NOTE: Panel data is pre-post. Data processing and model estimation will treat data as pre-post")
+        if verbose:
+            print("NOTE: Panel data is pre-post. Data processing and model estimation will treat data as pre-post")
         
         pre_post = True
         
