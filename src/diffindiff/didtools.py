@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.8
-# Last update: 2026-10-17 18:53
+# Version:     2.2.9
+# Last update: 2026-10-30 21:20
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1618,6 +1618,7 @@ def model_wrapper(
                     random_state = random_state
                 )
             else:
+                model = {}
                 model_estimation_error = True
                 model_estimation_error_text = "XGBRegressor is not available. Please install xgboost to use this model type."
             
@@ -1630,6 +1631,7 @@ def model_wrapper(
                     random_state = random_state
                 )
             else:
+                model = {}
                 model_estimation_error = True
                 model_estimation_error_text = "LGBMRegressor is not available. Please install lightgbm to use this model type."
             
@@ -1656,7 +1658,8 @@ def model_wrapper(
                 ]
             )
         
-        model.fit(X_train, y_train)
+        if model != {}:
+            model.fit(X_train, y_train)
         
     except Exception as e:
                 
@@ -1870,7 +1873,11 @@ def fit_metrics(
     SAR = float(np.sum(residuals_abs))    
     observed_mean = float(np.sum(observed)/observed_no)
     SQT = float(np.sum((observed-observed_mean)**2))
-    RSQ = float(1-(SSR/SQT))    
+    
+    RSQ = np.nan
+    if SQT > 0: 
+        RSQ = float(1-(SSR/SQT))    
+    
     MSE = float(SSR/observed_no)
     RMSE = float(np.sqrt(MSE))
     MAE = float(SAR/observed_no)    

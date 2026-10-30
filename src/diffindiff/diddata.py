@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.3.4
-# Last update: 2026-10-17 21:34
+# Version:     2.3.5
+# Last update: 2026-10-30 21:20
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -2958,12 +2958,12 @@ def create_counterfactual(
         verbose = verbose
         )
 
-    model_estimation_error = counterfactual_pred[6]
+    model_estimation_error = counterfactual_pred[5]
     model_estimation_error_text = ""
 
     if model_estimation_error:
 
-        model_estimation_error_text = counterfactual_pred[7]
+        model_estimation_error_text = counterfactual_pred[6]
         print(f"WARNING: The desired {config.MODEL_WRAPPER_AVAILABLE[model_type]} model was not estimated. The following error occurred: '{model_estimation_error_text}'.")
 
     else:

@@ -68,6 +68,10 @@ If you use the `diffindiff` Python package in your research, please cite the sof
 
 Please keep discussions and contributions respectful, constructive, and focused on improving the software.
 
+## Usage of AI
+
+The package's Python code was written without the assistance of AI tools, and it should stay that way. This does explicitly not apply to the docstring documentation of the functions. Instructions for this are provided to the agent in the AGENTS-docstrings.md file. I also consider the use of AI tools for testing the package entirely legitimate.
+
 ## License
 
 By contributing to this repository, you agree that your contributions will be licensed under the MIT License used by `diffindiff`.

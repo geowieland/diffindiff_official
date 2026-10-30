@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.8
-# Last update: 2026-10-17 21:15
+# Version:     2.4.9
+# Last update: 2026-10-24 09:30
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -1877,19 +1877,21 @@ class DiffModel:
         outcome_col_expected_PI_lower_CG = f"{outcome_col}{config.DELIMITER}{config.EXPECTED_SUFFIX}{config.DELIMITER}{config.PI_LOWER_SUFFIX}{config.DELIMITER}{config.CG_COL}"
         outcome_col_expected_PI_upper_CG = f"{outcome_col}{config.DELIMITER}{config.EXPECTED_SUFFIX}{config.DELIMITER}{config.PI_UPPER_SUFFIX}{config.DELIMITER}{config.CG_COL}"
 
-        model_data_TG_CG.columns.values[0] = "t"
-        model_data_TG_CG.columns.values[1] = outcome_col_observed_TG
-        model_data_TG_CG.columns.values[2] = outcome_col_observed_CG
-        model_data_TG_CG.columns.values[3] = outcome_col_expected_TG
-        model_data_TG_CG.columns.values[4] = outcome_col_expected_CG
-        model_data_TG_CG.columns.values[5] = outcome_col_expected_CI_lower_TG
-        model_data_TG_CG.columns.values[6] = outcome_col_expected_CI_upper_TG
-        model_data_TG_CG.columns.values[7] = outcome_col_expected_CI_lower_CG
-        model_data_TG_CG.columns.values[8] = outcome_col_expected_CI_upper_CG
-        model_data_TG_CG.columns.values[9] = outcome_col_expected_PI_lower_TG
-        model_data_TG_CG.columns.values[10] = outcome_col_expected_PI_upper_TG
-        model_data_TG_CG.columns.values[11] = outcome_col_expected_PI_lower_CG
-        model_data_TG_CG.columns.values[12] = outcome_col_expected_PI_upper_CG
+        model_data_TG_CG.columns = [
+            "t",
+            outcome_col_observed_TG,
+            outcome_col_observed_CG,
+            outcome_col_expected_TG,
+            outcome_col_expected_CG,
+            outcome_col_expected_CI_lower_TG,
+            outcome_col_expected_CI_upper_TG,
+            outcome_col_expected_CI_lower_CG,
+            outcome_col_expected_CI_upper_CG,
+            outcome_col_expected_PI_lower_TG,
+            outcome_col_expected_PI_upper_TG,
+            outcome_col_expected_PI_lower_CG,
+            outcome_col_expected_PI_upper_CG,
+        ]
                
         if plot_size_auto:
             if model_config["pre_post"]:
