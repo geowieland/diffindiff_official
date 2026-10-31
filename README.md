@@ -1,5 +1,7 @@
 # diffindiff: Python library for convenient Difference-in-Differences analyses
 
+![Version](https://img.shields.io/pypi/v/diffindiff) ![Downloads](https://static.pepy.tech/badge/diffindiff)
+
 This Python library is designed for performing Difference-in-Differences (DiD) analyses in a convenient way. The package is intended to be used in econometric analyses of natural experiments by researchers in economics, marketing, economic geography, and health sciences. It is designed to cover the entire workflow of a DiD analysis, while not requiring extensive programming skills. The package allows users to construct datasets, define treatment and control groups, and set treatment periods. DiD model analyses may be conducted with both datasets created by built-in functions and ready-to-use external datasets. Both simultaneous and staggered adoption are supported. The library allows for various extensions, such as two-way fixed effects models, group- or individual-specific effects, post-treatment periods, and triple-difference estimations. Additionally, it includes functions for visualizing results, such as plotting DiD coefficients with confidence intervals and illustrating the temporal evolution of staggered treatments. Furthermore, several functions for rigorous treatment configuration and data diagnostics are incorporated.
 
 
