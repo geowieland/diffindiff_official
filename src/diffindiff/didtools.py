@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.2.9
-# Last update: 2026-10-30 21:20
+# Version:     2.2.10
+# Last update: 2026-11-14 11:18
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -25,6 +25,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPRegressor
+import warnings
 
 try:
     from xgboost import XGBRegressor
@@ -1402,7 +1403,6 @@ def model_wrapper(
     ):
 
     """
-
     Train a machine learning or OLS regression model and return predictions and metrics.
 
     Parameters
@@ -1430,6 +1430,14 @@ def model_wrapper(
         using this as the class labels.
         Passed to `sklearn.model_selection.train_test_split`;
         see the corresponding documentation.
+    X_train : array-like, optional
+        User-defined training feature data. Supply together with the other training and testing subsets.
+    X_test : array-like, optional
+        User-defined testing feature data. Supply together with the other training and testing subsets.
+    y_train : array-like, optional
+        User-defined training target values. Supply together with the other training and testing subsets.
+    y_test : array-like, optional
+        User-defined testing target values. Supply together with the other training and testing subsets.
     model_n_estimators : int, optional
         The number of estimators in the ensemble.
         Passed to `BaggingRegressor` and `RandomForestRegressor`;
@@ -1506,6 +1514,12 @@ def model_wrapper(
     --------
     >>> model_wrapper(y, X, model_type='ols')
     """
+
+    warnings.warn(
+        "didtools.model_wrapper() is deprecated and will be replaced in a future version.",
+        DeprecationWarning,
+        stacklevel=2
+    )
 
     if model_type not in config.MODEL_WRAPPER_AVAILABLE_LIST:
         raise ValueError(f"Please enter a valid model type: {', '.join(config.MODEL_WRAPPER_AVAILABLE_LIST)}.")
@@ -1766,10 +1780,10 @@ def fit_metrics(
 
     Raises
     ------
-    AssertionError
-        If observed and expected differ in length.
     ValueError
-        If observed and/or expected are not numeric, or contain NaNs when remove_nan is False.
+        If observed and expected differ in length, or contain NaNs when remove_nan is False, or no observations are left after removing NaNs.
+    TypeError
+        If observed and/or expected are not numeric.
 
     Examples
     --------
@@ -1779,21 +1793,23 @@ def fit_metrics(
     observed_no = len(observed)
     expected_no = len(expected)
 
-    assert observed_no == expected_no, "Error while calculating fit metrics: Observed and expected differ in length"
-    
+    if observed_no != expected_no:
+        raise ValueError("Error while calculating fit metrics: Observed and expected differ in length")
+  
     type_errors = []
-    if not pd.api.types.is_numeric_dtype(observed) or not np.issubdtype(observed.dtype, np.number):
-        try:
-            observed = pd.to_numeric(observed)
-        except:
-            type_errors.append("Observed column is not numeric.")
-    if not pd.api.types.is_numeric_dtype(expected) or not np.issubdtype(expected.dtype, np.number):
-        try:
-            expected = pd.to_numeric(expected)
-        except:
-            type_errors.append("Expected column is not numeric.")
+    try:
+        observed = pd.to_numeric(observed)
+    except:
+        type_errors.append("Observed column is not numeric.")
+    try:
+        expected = pd.to_numeric(expected)
+    except:
+        type_errors.append("Expected column is not numeric.")
     if len(type_errors) > 0:
         raise TypeError(f"Error(s) while calculating fit metrics: {', '.join(type_errors)}")
+
+    observed = pd.Series(observed).to_numpy(dtype=np.float64, na_value=np.nan)
+    expected = pd.Series(expected).to_numpy(dtype=np.float64, na_value=np.nan)
     
     if outcome_col is not None and isinstance(outcome_col, str):
         outcome_observed_col = f"{outcome_col}{config.DELIMITER}{config.OBSERVED_SUFFIX}"
@@ -1801,18 +1817,19 @@ def fit_metrics(
     else:
         outcome_observed_col = f"outcome{config.DELIMITER}{config.OBSERVED_SUFFIX}"
         outcome_expected_col = f"outcome{config.DELIMITER}{config.EXPECTED_SUFFIX}"
+
+    obs_exp = pd.DataFrame(
+        {
+            outcome_observed_col: observed, 
+            outcome_expected_col: expected
+            }
+        )
+    observations_input = len(obs_exp)
     
     if remove_nan:
         
         observed = np.array(observed)
         expected = np.array(expected)
-
-        obs_exp = pd.DataFrame(
-            {
-                outcome_observed_col: observed, 
-                outcome_expected_col: expected
-                }
-            )
         
         obs_exp_clean = obs_exp.dropna(
             subset=[
@@ -1823,6 +1840,9 @@ def fit_metrics(
         
         observed = obs_exp_clean[outcome_observed_col].to_numpy()
         expected = obs_exp_clean[outcome_expected_col].to_numpy()
+
+        observed_no = len(observed)
+        expected_no = len(expected)
     
     else:
         
@@ -1833,11 +1853,14 @@ def fit_metrics(
             value_errors.append("Expected data contains NaNs.")
         if len(value_errors) > 0:
             raise ValueError(f"Error(s) while calculating fit metrics: {' '.join(value_errors)} Parameter 'remove_nan' is False.")
-    
+   
+    observations = len(observed)
+
+    if observations == 0:
+        raise ValueError("No observations left for calculating model fit metrics.")
+
     if verbose:
         print("Calculating model fit metrics", end = " ... ")
-    
-    observations = len(observed)
     
     residuals = np.array(observed)-np.array(expected)
     residuals_sq = residuals**2
@@ -1888,8 +1911,8 @@ def fit_metrics(
         try:
             indep_vars_no = int(indep_vars_no)
             RSQ_ADJ = (1-(1-RSQ)*((observations-1)/(observations-indep_vars_no-1)))
-        except:
-            pass                
+        except Exception as e:
+            print(f"WARNING: Adj. R-squared can not be computed: {str(e)}")                
 
     model_fit_metrics = {
         list(config.MODEL_FIT_METRICS.keys())[0]: SSR,
@@ -1912,8 +1935,9 @@ def fit_metrics(
         if RSQ_ADJ == np.nan:
             print("NOTE: As no number of independent vars was stated, no Adj. R-Squared is calculated.")
 
-        if len(obs_exp_clean) < len(observed) or len(obs_exp_clean) < len(expected):
-            print("NOTE: Vectors 'observed' and/or 'expected' contain NaNs which were dropped.")
+    if observations < observations_input:
+        observations_input_nan = observations_input-observations
+        print(f"WARNING: {observations_input_nan} pairs of observed and expected were removed due to NaN values.")
             
     modelfit_results = [
         model_residuals,

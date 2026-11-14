@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     2.4.9
-# Last update: 2026-10-24 09:30
+# Version:     2.4.10
+# Last update: 2026-11-14 09:53
 # Copyright (c) 2024-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -45,6 +45,8 @@ class DiffModel:
             Predicted values of the DiD model.
         did_model: statsmodels regression results object
             The fitted DiD model object from statsmodels.
+        timestamp : dict
+            Metadata identifying the package version, function and creation time.
         
         Returns
         -------
@@ -124,6 +126,8 @@ class DiffModel:
             Treatment name to analyse. If None, the first treatment in the model config is chosen.
         after_treatment_col : str, optional
             Column name of an after-treatment indicator, if present.
+        verbose : bool, optional
+            If True, print progress messages.
 
         Returns
         -------
@@ -1122,6 +1126,8 @@ class DiffModel:
         retransform_log_outcome : bool, optional
             If outcome was log-transformed, retransform to original scale for plotting. 
             Default is False.
+        verbose : bool, optional
+            If True, print progress messages.
 
         Returns
         -------
@@ -1334,6 +1340,8 @@ class DiffModel:
         ----------
         treatment : str, optional
             Treatment name to use for placebo assignment.
+        after_treatment_col : str, optional
+            Column name identifying the after-treatment period.
         TG_col : str, optional
             Column name identifying treatment group.
         TT_col : str, optional
@@ -1344,6 +1352,8 @@ class DiffModel:
             Fraction of the divided group to sample when creating placebo units.
         random_state : int, optional
             Seed for random sampling.
+        verbose : bool, optional
+            If True, print progress messages.
 
         Returns
         -------
@@ -1528,6 +1538,8 @@ class DiffModel:
             If not none, filename of plot to be saved.
         save_fig_kwargs : dict, optional
             Optional arguments for plt.savefig() if save_fig is not None.
+        verbose : bool, optional
+            If True, print progress messages.
 
         Returns
         -------
@@ -1686,6 +1698,8 @@ class DiffModel:
             If not none, filename of plot to be saved.
         save_fig_kwargs : dict, optional
             Optional arguments for plt.savefig() if save_fig is not None.
+        verbose : bool, optional
+            If True, print progress messages.
 
         Returns
         -------
@@ -2161,6 +2175,8 @@ class DiffModel:
             If not none, filename of plot to be saved.
         save_fig_kwargs : dict, optional
             Optional arguments for plt.savefig() if save_fig is not None.
+        verbose : bool, optional
+            If True, print progress messages.
 
         Returns
         -------

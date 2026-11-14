@@ -4,8 +4,8 @@
 # Author:      Thomas Wieland 
 #              ORCID: 0000-0001-5168-9846
 #              mail: geowieland@googlemail.com              
-# Version:     1.2.6
-# Last update: 2026-10-17 18:55
+# Version:     1.2.7
+# Last update: 2026-11-14 09:52
 # Copyright (c) 2025-2026 Thomas Wieland
 #-----------------------------------------------------------------------
 
@@ -147,6 +147,14 @@ def demean_variables(
         Names of spillover variables to demean (default: None).
     interactions : list, optional
         Names of interaction variables to demean (default: None).
+    TG_col : list, optional
+        Names of treatment-group indicator variables to demean.
+    TT_col : list, optional
+        Names of treatment-time indicator variables to demean.
+    after_treatment_col : list, optional
+        Names of after-treatment indicator variables to demean.
+    ATT_col : list, optional
+        Names of average treatment effect on the treated variables to demean.
     FE_unit : bool, optional
         If True, remove unit means (within-unit demeaning). Default is False.
     FE_time : bool, optional
@@ -158,7 +166,7 @@ def demean_variables(
         Convergence tolerance for iterative demeaning. Iteration stops when the
         maximum absolute change across observations is below `tol`. Default is 1e-8.
     verbose : bool, optional
-        If True, print progress and informational messages (default: config.VERBOSE).
+        If True, print progress messages.
 
     Returns
     -------
@@ -1246,8 +1254,48 @@ def extract_model_results(
     ----------
     fit_result : list
         Result returned by ``ols_fit`` or ``ml_fit``.
-    Other parameters
-        Lists of variable names used to identify coefficients (TG_col, TT_col, etc.).
+    TG_col : list, optional
+        Treatment-group variable names used to identify treatment-group coefficients.
+    TT_col : list, optional
+        Treatment-time variable names used to identify treatment-time coefficients.
+    treatment_col : list, optional
+        Treatment variable names used to identify treatment coefficients.
+    after_treatment_col : list, optional
+        After-treatment variable names used to identify after-treatment coefficients.
+    ATT_col : list, optional
+        Variable names used to identify average treatment effect on the treated coefficients.
+    spillover_vars : list, optional
+        Spillover variable names used to identify spillover coefficients.
+    FE_unit_vars : list, optional
+        Unit fixed-effect variable names used to identify fixed-effect coefficients.
+    dummy_unit_original : list, optional
+        Original unit identifiers corresponding to unit fixed-effect dummy variables.
+    FE_time_vars : list, optional
+        Time fixed-effect variable names used to identify fixed-effect coefficients.
+    dummy_time_original : list, optional
+        Original time identifiers corresponding to time fixed-effect dummy variables.
+    FE_group_vars : list, optional
+        Group fixed-effect variable names used to identify fixed-effect coefficients.
+    dummy_group_original : list, optional
+        Original group identifiers corresponding to group fixed-effect dummy variables.
+    ITE_vars : list, optional
+        Variable names used to identify individual treatment effect coefficients.
+    GTE_vars : list, optional
+        Variable names used to identify group treatment effect coefficients.
+    ITT_vars : list, optional
+        Variable names used to identify individual treatment-on-the-treated coefficients.
+    GTT_vars : list, optional
+        Variable names used to identify group treatment-on-the-treated coefficients.
+    TG_x_BG_x_TT_col : list, optional
+        Variable names used to identify treatment-group, background-group and treatment-time interaction coefficients.
+    BG_col : list, optional
+        Background-group variable names used to identify background-group coefficients.
+    TG_x_BG_col : list, optional
+        Variable names used to identify treatment-group and background-group interaction coefficients.
+    BG_x_TT_col : list, optional
+        Variable names used to identify background-group and treatment-time interaction coefficients.
+    covariates : list, optional
+        Covariate names used to identify covariate coefficients.
     verbose : bool, optional
         If True, print progress messages.
 
@@ -1831,6 +1879,8 @@ def remove_duplicates_from_dict(
     ----------
     any_dict : dict
         Dictionary from which to remove duplicates.
+    ignore_key : any, optional
+        Dictionary key to exclude when comparing values for duplicates.
 
     Returns
     -------

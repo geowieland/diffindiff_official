@@ -23,7 +23,7 @@ A case study that utilizes the diffindiff library (preprint) is available on [ar
 
 If you use this software, please cite:
 
-Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.9) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
+Wieland, T. (2026). diffindiff: A Python library for convenient difference-in-differences analyses (Version 2.5.10) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.18656820
 
 
 ## Installation
@@ -174,9 +174,10 @@ See the /tests directory for usage examples of most of the included functions.
 This software was developed without the use of AI-generated code. The GitHub Copilot Chat in Microsoft Visual Studio Code using the GPT-5 mini model (by OpenAI) was used solely to assist in drafting and refining docstrings for documentation. The corresponding guidelines and constraints defined by the author are documented in `AGENTS-docstrings.md` in the [public GitHub repository](https://github.com/geowieland/diffindiff_official).
 
 
-## What's new (v2.5.9)
+## What's new (v2.5.10)
 
 - Bugfixes
-  - Adjusting column naming to be compatible with newer pandas versions in `didanalysis.DiffModel.plot()`
-  - Check in `didtools.fit_metrics()` whether total sum of squares is positive before calculating $$R^2$$
-  - Incorrect access to counterfactual results in the event of model fit errors or model unavailability has been fixed in `diddata.create_counterfactual()`
+  - Fixed some problems in `didtools.fit_metrics()` which relate to edge cases (e.g., no valid observations)
+- Other
+  - Included deprecation warning for `didtools.model_wrapper()`
+  - Updates and corrections of docstring documentations
